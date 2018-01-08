@@ -1,0 +1,92 @@
+<html>
+  <body style="margin: 0; background: black;">
+    <div style="text-align: center;">
+      <canvas id="canvas"></canvas>
+    </div>
+    <script src="dm.js"></script>
+    <script>
+
+'use strict';
+
+const objects = [
+  new Circle(100, 100, 25, 'blue'),
+  new Circle(100, 200, 30, 'green'),
+  new Rectangle(200, 100, 80, 40, 'red'),
+  new Rectangle(200, 200, 100, 35, 'orange')
+];
+
+const mouse = {
+  x: -10,
+  y: -10,
+  buttonIsDown: false,
+  targetObj: null,
+  targetObjOffsetX: 0,
+  targetObjectOffsetY: 0
+};
+
+const ctxt = canvas.getContext('2d');
+
+canvas.onmousemove = e => {
+  mouse.x = e.offsetX;
+  mouse.y = e.offsetY;
+  if (mouse.targetObj) {
+    mouse.targetObj.x = mouse.x - mouse.targetObjOffsetX;
+    mouse.targetObj.y = mouse.y - mouse.targetObjOffsetY;
+  }
+};
+
+document.body.onmousedown = e => {
+  mouse.targetObj = null;
+  for (let obj of objects) {
+    if (!mouse.targetObj && obj.containsPoint(mouse.x, mouse.y)) {
+      mouse.targetObj = obj;
+      mouse.targetObjOffsetX = mouse.x - obj.x;
+      mouse.targetObjOffsetY = mouse.y - obj.y;
+      objects.splice(objects.indexOf(obj), 1);
+      objects.push(obj);
+    }
+  }
+  mouse.buttonIsDown = true;
+};
+
+document.body.onmouseup = e => {
+  mouse.buttonIsDown = false;
+  mouse.targetObj = null;
+};
+
+async function main(t) {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctxt.clearRect(0, 0, canvas.width, canvas.height);
+  for (let obj of objects) {
+    const options = {
+      isSender: obj === mouse.targetObj,
+      isReceiver: mouse.targetObj && mouse.targetObj.overlapsWith(obj)
+    }
+    obj.drawOn(ctxt, options);
+  }
+  requestAnimationFrame(main);
+}
+
+requestAnimationFrame(main);
+
+/*
+let count = 0;
+
+async function counter() {
+  return ++count;
+}
+
+async function main(t) {
+  console.log('hello', t, await counter());
+  if (count < 100) {
+    requestAnimationFrame(main);
+  }
+}
+
+requestAnimationFrame(main);
+*/
+
+    </script>
+  </body>
+</html>
