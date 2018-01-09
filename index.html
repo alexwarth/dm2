@@ -42,6 +42,7 @@ document.body.onmousedown = e => {
   for (let idx = objects.length - 1; idx >= 0; idx--) {
     const obj = objects[idx];
     if (!mouse.targetObj && obj.containsPoint(mouse.x, mouse.y)) {
+      count = 0;
       mouse.targetObj = obj;
       mouse.targetObjOffsetX = mouse.x - obj.x;
       mouse.targetObjOffsetY = mouse.y - obj.y;
@@ -57,7 +58,7 @@ document.body.onmouseup = e => {
   mouse.targetObj = null;
 };
 
-let count = 0;
+let count;
 
 function seconds(s) {
   return new Promise(resolve => {
@@ -65,7 +66,8 @@ function seconds(s) {
   });
 }
 
-let dir = 'right';
+let dir = 'nearby';
+let dist = 100;
 
 async function main() {
   canvas.width = window.innerWidth;
@@ -80,8 +82,8 @@ async function main() {
     obj.drawOn(ctxt);
   }
 
-  if (count++ % 200 === 0) {
-    await objects[0].send(dir, 100, 'conduct', dir);
+  if (mouse.targetObj && ++count % 200 === 0) {
+    await mouse.targetObj.send(dir, dist, 'conduct', dir, dist);
   }
 
   requestAnimationFrame(main);

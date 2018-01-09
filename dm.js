@@ -64,47 +64,54 @@ class Obj {
     // no-op
   }
 
-  async conduct(dir) {
-    await this.send(dir, 100, 'conduct', dir);
+  async conduct(dir, dist) {
+    if (this.color !== 'red') {
+      console.log(this.color);
+      this.color = 'red';
+      await this.send(dir, dist, 'conduct', dir, dist);
+    }
   }
 
   async send(dir, threshold, selector, ...args) {
+    const waitTimeSecs = .1;
     const beam = this.makeBeam(dir, threshold);
     beams.push(beam);
 
-    const dampingFactor = 0.8;
-    ctxt.clearRect(0, 0, canvas.width, canvas.height);
-    ctxt.globalAlpha = 0.25 * Math.pow(dampingFactor, beams.length - 1);
-    for (let beam of beams) {
-      beam.drawOn(ctxt);
-      ctxt.globalAlpha /= dampingFactor;
-    }
-    ctxt.globalAlpha = 1;
-
     const receivers = objects.filter(obj => obj !== this && beam.overlapsWith(obj));
-    async function draw() {
+
+    function draw() {
+      ctxt.clearRect(0, 0, canvas.width, canvas.height);
+      const dampingFactor = 0.8;
+      ctxt.globalAlpha = 0.25 * Math.pow(dampingFactor, beams.length - 1);
+      for (let beam of beams) {
+        beam.drawOn(ctxt);
+        ctxt.globalAlpha /= dampingFactor;
+      }
+      ctxt.globalAlpha = 1;
       for (let obj of objects) {
         const options = {
-          isSender: obj === this,
+          isSender: obj === beam.sender,
           isReceiver: receivers.includes(obj)
         }
         obj.drawOn(ctxt, options);
       }
-      await seconds(.1);
     }
-    await draw();
+
+    draw();
+    await seconds(waitTimeSecs);
 
     const responses = [];
     try {
       for (let receiver of receivers) {
         const result = await (async () => {
           const ans = await receiver[selector](...args);
-          await draw();
           return ans;
         })();
         responses.push({receiver, result});
       }
       beams.pop();
+      draw();
+      await seconds(waitTimeSecs);
       return responses;
     } catch (e) {
       console.error(e);
@@ -113,46 +120,54 @@ class Obj {
   }
 
   makeBeam(dir, optThreshold) {
+    let beam;
     switch (dir) {
       case 'up': {
         const beamHeight = optThreshold || this.y;
-        return this.makeDirectionalBeam(
+        beam = this.makeDirectionalBeam(
           this.x,
           this.y - beamHeight / 2,
           this.rightX - this.leftX,
           beamHeight);
+        break;
       }
       case 'down': {
-        const beamHeight = optThreshold || this.y;
-        return this.makeDirectionalBeam(
+        const beamHeight = optThreshold || (canvas.height - this.y);
+        beam = this.makeDirectionalBeam(
           this.x,
           this.y + beamHeight / 2,
           this.rightX - this.leftX,
           beamHeight);
+        break;
       }
       case 'left': {
         const beamWidth = optThreshold || this.x;
-        return this.makeDirectionalBeam(
+        beam = this.makeDirectionalBeam(
           this.x - beamWidth / 2,
           this.y,
           beamWidth,
           this.bottomY - this.topY);
+        break;
       }
       case 'right': {
-        const beamWidth = optThreshold || this.x;
-        return this.makeDirectionalBeam(
+        const beamWidth = optThreshold || (canvas.width - this.x);
+        beam = this.makeDirectionalBeam(
           this.x + beamWidth / 2,
           this.y,
           beamWidth,
           this.bottomY - this.topY);
+        break;
       }
       case 'nearby': {
-        return this.makeProximityBeam(optThreshold || Math.max(canvas.width, canvas.height));
+        beam = this.makeProximityBeam(optThreshold || Math.max(canvas.width, canvas.height));
+        break;
       }
       default: {
         throw new Error('unknown direction ' + dir);
       }
     }
+    beam.sender = this;
+    return beam;
   }
 
   makeDirectionalBeam(x, y, width, height) {
