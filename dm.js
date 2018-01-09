@@ -7,6 +7,10 @@ class Obj {
     this.color = color;
   }
 
+  async ping() {
+    return 'pong';
+  }
+
   get leftX() {
     throw new Error('subclass responsibility');
   }
@@ -36,16 +40,19 @@ class Obj {
   }
 
   setStrokeStyle(ctxt, options) {
+    if (!options) {
+      return false;
+    }
     if (options.isSender) {
-      ctxt.strokeStyle = 'yellow';
+      ctxt.strokeStyle = 'white';
       ctxt.lineWidth = 4;
       return true;
     } else if (options.isCurrentReceiver) {
-      ctxt.strokeStyle = 'red';
+      ctxt.strokeStyle = 'yellow';
       ctxt.lineWidth = 4;
       return true;
     } else if (options.isReceiver) {
-      ctxt.strokeStyle = 'red';
+      ctxt.strokeStyle = 'yellow';
       ctxt.lineWidth = 2;
       return true;
     } else {
@@ -53,46 +60,106 @@ class Obj {
     }
   }
 
-  sendUp(optThreshold) {
-    const beamHeight = optThreshold || this.y;
-    this.addDirectionalBeam(
-      this.x,
-      this.y - beamHeight / 2,
-      this.rightX - this.leftX,
-      beamHeight);
-  }
-
-  sendLeft(optThreshold) {
-    const beamWidth = optThreshold || this.x;
-    this.addDirectionalBeam(
-      this.x - beamWidth / 2,
-      this.y,
-      beamWidth,
-      this.bottomY - this.topY);
-  }
-
-  sendNearby(radius) {
-    this.addProximityBeam(radius);
-  }
-
-  addDirectionalBeam(x, y, width, height) {
-    const beam = new Rectangle(x, y, width, height, 'rgba(255, 255, 255, .25)');
-    beam.isBeam = true;
-    beam.sender = this;
-    objects.splice(objects.indexOf(this), 0, beam);
-    return beam;
-  }
-
-  addProximityBeam(radius) {
-    const beam = new Circle(this.x, this.y, radius, 'rgba(255, 255, 255, .25)');
-    beam.isBeam = true;
-    beam.sender = this;
-    objects.splice(objects.indexOf(this), 0, beam);
-    return beam;
-  }
-
   async step() {
     // no-op
+  }
+
+  async conductRight() {
+    await this.send('right', 100, 'conductRight');
+  }
+
+  async send(dir, threshold, selector, ...args) {
+    const beam = this.makeBeam(dir, threshold);
+    beams.push(beam);
+
+    const dampingFactor = 0.8;
+    ctxt.clearRect(0, 0, canvas.width, canvas.height);
+    ctxt.globalAlpha = 0.25 * Math.pow(dampingFactor, beams.length - 1);
+    for (let beam of beams) {
+      console.log('ga', ctxt.globalAlpha);
+      beam.drawOn(ctxt);
+      ctxt.globalAlpha /= dampingFactor;
+    }
+    ctxt.globalAlpha = 1;
+
+    const receivers = objects.filter(obj => obj !== this && beam.overlapsWith(obj));
+    for (let obj of objects) {
+      const options = {
+        isSender: obj === this,
+        isReceiver: receivers.includes(obj)
+      }
+      obj.drawOn(ctxt, options);
+    }
+    await seconds(1);
+
+    const responses = [];
+    try {
+      for (let receiver of receivers) {
+        const result = await (async () => {
+          return await receiver[selector](args);
+        })();
+        responses.push({receiver, result});
+      }
+      beams.pop();
+      return responses;
+    } catch (e) {
+      throw new Error('TODO: handle exceptions...');
+    }
+  }
+
+  makeBeam(dir, optThreshold) {
+    switch (dir) {
+      case 'up': {
+        const beamHeight = optThreshold || this.y;
+        return this.makeDirectionalBeam(
+          this.x,
+          this.y - beamHeight / 2,
+          this.rightX - this.leftX,
+          beamHeight);
+      }
+      case 'down': {
+        const beamHeight = optThreshold || this.y;
+        return this.makeDirectionalBeam(
+          this.x,
+          this.y + beamHeight / 2,
+          this.rightX - this.leftX,
+          beamHeight);
+      }
+      case 'left': {
+        const beamWidth = optThreshold || this.x;
+        return this.makeDirectionalBeam(
+          this.x - beamWidth / 2,
+          this.y,
+          beamWidth,
+          this.bottomY - this.topY);
+      }
+      case 'right': {
+        const beamWidth = optThreshold || this.x;
+        return this.makeDirectionalBeam(
+          this.x + beamWidth / 2,
+          this.y,
+          beamWidth,
+          this.bottomY - this.topY);
+      }
+      case 'nearby': {
+        return this.makeProximityBeam(optThreshold || Math.max(canvas.width, canvas.height));
+      }
+      default: {
+        throw new Error('unknown direction ' + dir);
+      }
+    }
+  }
+
+  makeDirectionalBeam(x, y, width, height) {
+    const beam = new Rectangle(x, y, width, height, 'yellow');
+    beam.sender = this;
+    return beam;
+  }
+
+  makeProximityBeam(radius) {
+    const beam = new Circle(this.x, this.y, radius, 'yellow');
+    beam.sender = this;
+    return beam;
   }
 }
 
@@ -133,10 +200,11 @@ class Rectangle extends Obj {
           this.containsPoint(that.rightX, that.bottomY);
     } else if (that instanceof Circle) {
       return false ||
-          that.containsPoint(this.leftX, this.topY) ||
-          that.containsPoint(this.leftX, this.bottomY) ||
-          that.containsPoint(this.rightX, this.topY) ||
-          that.containsPoint(this.rightX, this.bottomY);
+          this.containsPoint(that.x, that.y) ||
+          that.intersectsWithLine(this.leftX, this.topY, this.rightX, this.topY) ||
+          that.intersectsWithLine(this.leftX, this.topY, this.leftX, this.bottomY) ||
+          that.intersectsWithLine(this.rightX, this.topY, this.rightX, this.bottomY) ||
+          that.intersectsWithLine(this.leftX, this.bottomY, this.rightX, this.bottomY);
     } else {
       throw new Error('???');
     }
@@ -178,6 +246,20 @@ class Circle extends Obj {
     const dy = this.y - y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     return dist < this.radius;
+  }
+
+  intersectsWithLine(x1, y1, x2, y2) {
+    if (this.containsPoint(x1, y1) || this.containsPoint(x2, y2)) {
+      return true;
+    } else if (y1 === y2) {
+      return this.topY <= y1 && y1 <= this.bottomY &&
+             x1 <= this.leftX && this.rightX <= x2;
+    } else if (x1 === x2) {
+      return this.leftX <= x1 && x1 <= this.rightX &&
+             y1 <= this.topY && this.bottomY <= y2;
+    } else {
+      throw new Error('TODO');
+    }
   }
 
   overlapsWith(that) {

@@ -15,6 +15,8 @@ const objects = [
   new Rectangle(200, 200, 100, 35, 'orange')
 ];
 
+const beams = [];
+
 const mouse = {
   x: -10,
   y: -10,
@@ -37,8 +39,9 @@ canvas.onmousemove = e => {
 
 document.body.onmousedown = e => {
   mouse.targetObj = null;
-  for (let obj of objects) {
-    if (!mouse.targetObj && obj.containsPoint(mouse.x, mouse.y)) {
+  for (let idx = objects.length - 1; idx >= 0; idx--) {
+    const obj = objects[idx];
+    if (!mouse.targetObj && !obj.isBeam && obj.containsPoint(mouse.x, mouse.y)) {
       mouse.targetObj = obj;
       mouse.targetObjOffsetX = mouse.x - obj.x;
       mouse.targetObjOffsetY = mouse.y - obj.y;
@@ -54,38 +57,37 @@ document.body.onmouseup = e => {
   mouse.targetObj = null;
 };
 
-async function main(t) {
+let count = 0;
+
+function seconds(s) {
+  return new Promise(resolve => {
+    setTimeout(resolve, s * 1000);
+  });
+}
+
+let dir = 'right';
+
+async function main() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+
+  for (let obj of objects) {
+    await obj.step();
+  }
+
   ctxt.clearRect(0, 0, canvas.width, canvas.height);
   for (let obj of objects) {
-    const options = {
-      isSender: obj === mouse.targetObj,
-      isReceiver: mouse.targetObj && mouse.targetObj.overlapsWith(obj)
-    }
-    obj.drawOn(ctxt, options);
+    obj.drawOn(ctxt);
   }
+
+  if (count++ % 100 === 0) {
+    await objects[0].send(dir, 100, 'conductRight');
+  }
+
   requestAnimationFrame(main);
 }
 
 requestAnimationFrame(main);
-
-/*
-let count = 0;
-
-async function counter() {
-  return ++count;
-}
-
-async function main(t) {
-  console.log('hello', t, await counter());
-  if (count < 100) {
-    requestAnimationFrame(main);
-  }
-}
-
-requestAnimationFrame(main);
-*/
 
     </script>
   </body>
