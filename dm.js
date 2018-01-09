@@ -66,7 +66,6 @@ class Obj {
 
   async conduct(dir, dist) {
     if (this.color !== 'red') {
-      console.log(this.color);
       this.color = 'red';
       await this.send(dir, dist, 'conduct', dir, dist);
     }

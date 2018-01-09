@@ -11,7 +11,7 @@
 const objects = [
   new Circle(100, 100, 25, 'blue'),
   new Circle(100, 200, 30, 'green'),
-  new Rectangle(200, 100, 80, 40, 'red'),
+  new Rectangle(200, 100, 80, 40, 'cornflowerblue'),
   new Rectangle(200, 200, 100, 35, 'orange')
 ];
 
@@ -42,7 +42,6 @@ document.body.onmousedown = e => {
   for (let idx = objects.length - 1; idx >= 0; idx--) {
     const obj = objects[idx];
     if (!mouse.targetObj && obj.containsPoint(mouse.x, mouse.y)) {
-      count = 0;
       mouse.targetObj = obj;
       mouse.targetObjOffsetX = mouse.x - obj.x;
       mouse.targetObjOffsetY = mouse.y - obj.y;
@@ -58,7 +57,38 @@ document.body.onmouseup = e => {
   mouse.targetObj = null;
 };
 
-let count;
+let scheduledSends = [];
+
+document.body.onkeydown = e => {
+  if (!mouse.targetObj) {
+    return;
+  }
+  const sender = mouse.targetObj;
+  const dist = e.shiftKey ? undefined : 100;
+  let dir;
+  switch (e.code) {
+    case 'KeyW':
+      dir = 'up';
+      break;
+    case 'KeyX':
+      dir = 'down';
+      break;
+    case 'KeyA':
+      dir = 'left';
+      break;
+    case 'KeyD':
+      dir = 'right';
+      break;
+    case 'KeyS':
+      dir = 'nearby';
+      break;
+  }
+  if (dir) {
+    const sel = 'conduct';
+    const args = [dir, dist];
+    scheduledSends.push({sender, dir, dist, sel, args});
+  }
+};
 
 function seconds(s) {
   return new Promise(resolve => {
@@ -82,8 +112,14 @@ async function main() {
     obj.drawOn(ctxt);
   }
 
-  if (mouse.targetObj && ++count % 200 === 0) {
-    await mouse.targetObj.send(dir, dist, 'conduct', dir, dist);
+  if (scheduledSends.length > 0) {
+    const sendData = scheduledSends.shift();
+    await sendData.sender.send(
+      sendData.dir,
+      sendData.dist,
+      sendData.sel,
+      ...sendData.args
+    );
   }
 
   requestAnimationFrame(main);
