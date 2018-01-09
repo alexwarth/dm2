@@ -64,8 +64,8 @@ class Obj {
     // no-op
   }
 
-  async conductRight() {
-    await this.send('right', 100, 'conductRight');
+  async conduct(dir) {
+    await this.send(dir, 100, 'conduct', dir);
   }
 
   async send(dir, threshold, selector, ...args) {
@@ -76,33 +76,38 @@ class Obj {
     ctxt.clearRect(0, 0, canvas.width, canvas.height);
     ctxt.globalAlpha = 0.25 * Math.pow(dampingFactor, beams.length - 1);
     for (let beam of beams) {
-      console.log('ga', ctxt.globalAlpha);
       beam.drawOn(ctxt);
       ctxt.globalAlpha /= dampingFactor;
     }
     ctxt.globalAlpha = 1;
 
     const receivers = objects.filter(obj => obj !== this && beam.overlapsWith(obj));
-    for (let obj of objects) {
-      const options = {
-        isSender: obj === this,
-        isReceiver: receivers.includes(obj)
+    async function draw() {
+      for (let obj of objects) {
+        const options = {
+          isSender: obj === this,
+          isReceiver: receivers.includes(obj)
+        }
+        obj.drawOn(ctxt, options);
       }
-      obj.drawOn(ctxt, options);
+      await seconds(.1);
     }
-    await seconds(1);
+    await draw();
 
     const responses = [];
     try {
       for (let receiver of receivers) {
         const result = await (async () => {
-          return await receiver[selector](args);
+          const ans = await receiver[selector](...args);
+          await draw();
+          return ans;
         })();
         responses.push({receiver, result});
       }
       beams.pop();
       return responses;
     } catch (e) {
+      console.error(e);
       throw new Error('TODO: handle exceptions...');
     }
   }
