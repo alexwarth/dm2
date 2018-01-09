@@ -72,11 +72,16 @@ class Obj {
   }
 
   async send(dir, threshold, selector, ...args) {
+    return this.tsend(Obj, dir, threshold, selector, ...args);
+  }
+
+  async tsend(type, dir, threshold, selector, ...args) {
     const waitTimeSecs = .1;
     const beam = this.makeBeam(dir, threshold);
     beams.push(beam);
 
-    const receivers = objects.filter(obj => obj !== this && beam.overlapsWith(obj));
+    const receivers = objects.filter(
+        obj => obj !== this && obj instanceof type && beam.overlapsWith(obj));
 
     async function showDebugStuff() {
       if (!debug) {

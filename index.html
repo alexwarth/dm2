@@ -120,7 +120,8 @@ async function main() {
 
   if (scheduledSends.length > 0) {
     const sendData = scheduledSends.shift();
-    await sendData.sender.send(
+    await sendData.sender.tsend(
+      sendData.sender.constructor,
       sendData.dir,
       sendData.dist,
       sendData.sel,

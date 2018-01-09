@@ -5,7 +5,6 @@ TODO
 ----
 
 * proximity scores and single sends
-* receiver filtering by type
 * fluent interface
 * show stack in debug mode
 * write space invaders
