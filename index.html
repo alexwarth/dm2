@@ -8,6 +8,8 @@
 
 'use strict';
 
+let debug = true;
+
 const objects = [
   new Circle(100, 100, 25, 'blue'),
   new Circle(100, 200, 30, 'green'),
@@ -60,6 +62,10 @@ document.body.onmouseup = e => {
 let scheduledSends = [];
 
 document.body.onkeydown = e => {
+  if (e.code === 'Space') {
+    debug = !debug;
+    return;
+  }
   if (!mouse.targetObj) {
     return;
   }

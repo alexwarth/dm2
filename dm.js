@@ -78,7 +78,10 @@ class Obj {
 
     const receivers = objects.filter(obj => obj !== this && beam.overlapsWith(obj));
 
-    function draw() {
+    async function showDebugStuff() {
+      if (!debug) {
+        return;
+      }
       ctxt.clearRect(0, 0, canvas.width, canvas.height);
       const dampingFactor = 0.8;
       ctxt.globalAlpha = 0.25 * Math.pow(dampingFactor, beams.length - 1);
@@ -94,10 +97,10 @@ class Obj {
         }
         obj.drawOn(ctxt, options);
       }
+      await seconds(waitTimeSecs);
     }
 
-    draw();
-    await seconds(waitTimeSecs);
+    await showDebugStuff();
 
     const responses = [];
     try {
@@ -109,8 +112,7 @@ class Obj {
         responses.push({receiver, result});
       }
       beams.pop();
-      draw();
-      await seconds(waitTimeSecs);
+      await showDebugStuff();
       return responses;
     } catch (e) {
       console.error(e);

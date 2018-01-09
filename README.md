@@ -4,7 +4,6 @@ Direct Messaging
 TODO
 ----
 
-* production / debug mode toggle
 * proximity scores and single sends
 * receiver filtering by type
 * fluent interface
