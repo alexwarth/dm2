@@ -80,10 +80,18 @@ class Obj {
     const beam = receiverDescriptor.toBeam();
     beams.push(beam);
 
-    const receivers = objects.filter(obj =>
-        obj !== this &&
-        obj instanceof receiverDescriptor.receiverType &&
-        beam.overlapsWith(obj));
+    function dist(a, b) {
+      return Math.pow(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2), 0.5);
+    }
+
+    const receivers = objects.
+        filter(obj =>
+            obj !== this &&
+              obj instanceof receiverDescriptor.receiverType &&
+                beam.overlapsWith(obj)).
+        sort((a, b) => dist(a, beam.sender) - dist(b, beam.sender));
+    receivers.length = Math.min(receivers.length, receiverDescriptor.maxNumReceivers);
+    console.log(receivers.map(obj => obj.color));
 
     async function showDebugStuff() {
       if (!debug) {
@@ -266,7 +274,7 @@ class ReceiverDescriptor {
 
   upTo(maxNumReceivers, optReceiverType) {
     this._set('maxNumReceivers', maxNumReceivers);
-    this._set('receiverType', optType);
+    this._set('receiverType', optReceiverType);
     return this;
   }
 
