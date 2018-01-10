@@ -64,7 +64,7 @@ class Obj {
     }
   }
 
-  async step() {
+  async step(t) {
     // no-op
   }
 

@@ -10,11 +10,19 @@
 
 let debug = true;
 
+const juicedUpRectangle = new Rectangle(200, 200, 100, 35, 'orange');
+juicedUpRectangle.origWidth = juicedUpRectangle.width;
+juicedUpRectangle.origHeight = juicedUpRectangle.height;
+juicedUpRectangle.step = function(t) {
+  this.width = this.origWidth + this.origWidth / 10 * Math.sin(t/60);
+  this.height = this.origHeight + this.origHeight / 10 * Math.cos(t/60);
+};
+
 const objects = [
   new Circle(100, 100, 25, 'blue'),
   new Circle(100, 200, 30, 'green'),
   new Rectangle(200, 100, 80, 40, 'cornflowerblue'),
-  new Rectangle(200, 200, 100, 35, 'orange')
+  juicedUpRectangle
 ];
 
 const beams = [];
@@ -103,14 +111,16 @@ function seconds(s) {
 
 let dir = 'nearby';
 let dist = 100;
+let t = 0;
 
-async function main() {
+async function main(t) {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
   for (let obj of objects) {
-    await obj.step();
+    await obj.step(t);
   }
+  t++;
 
   ctxt.clearRect(0, 0, canvas.width, canvas.height);
   for (let obj of objects) {
