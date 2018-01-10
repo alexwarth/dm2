@@ -4,8 +4,8 @@ Direct Messaging
 TODO
 ----
 
+* come up with a better name for ReceiverDescriptor (it includes the sender, so it's not just describing receivers)
 * proximity scores and single sends
-* fluent interface
 * show stack in debug mode
 * write space invaders
   * can i use a message to find out if an object has an overlap with another?

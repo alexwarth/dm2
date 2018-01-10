@@ -69,31 +69,30 @@ document.body.onkeydown = e => {
   if (!mouse.targetObj) {
     return;
   }
-  const sender = mouse.targetObj;
-  const dist = e.shiftKey ? undefined : 100;
-  let dir;
+  const descriptor = new ReceiverDescriptor(mouse.targetObj);
+  const maxDistance = e.shiftKey ? undefined : 100;
   switch (e.code) {
     case 'KeyW':
-      dir = 'up';
+      descriptor.up(maxDistance);
       break;
     case 'KeyX':
-      dir = 'down';
+      descriptor.down(maxDistance);
       break;
     case 'KeyA':
-      dir = 'left';
+      descriptor.left(maxDistance);
       break;
     case 'KeyD':
-      dir = 'right';
+      descriptor.right(maxDistance);
       break;
     case 'KeyS':
-      dir = 'nearby';
+      descriptor.nearby(maxDistance);
       break;
+    default:
+      return;
   }
-  if (dir) {
-    const sel = 'conduct';
-    const args = [dir, dist];
-    scheduledSends.push({sender, dir, dist, sel, args});
-  }
+  const selector = 'conduct';
+  const args = [descriptor.direction, maxDistance];
+  scheduledSends.push({descriptor, selector, args});
 };
 
 function seconds(s) {
@@ -119,14 +118,8 @@ async function main() {
   }
 
   if (scheduledSends.length > 0) {
-    const sendData = scheduledSends.shift();
-    await sendData.sender.tsend(
-      sendData.sender.constructor,
-      sendData.dir,
-      sendData.dist,
-      sendData.sel,
-      ...sendData.args
-    );
+    const {descriptor, selector, args} = scheduledSends.shift();
+    await descriptor.send(selector, ...args);
   }
 
   requestAnimationFrame(main);

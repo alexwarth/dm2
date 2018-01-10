@@ -7,6 +7,10 @@ class Obj {
     this.color = color;
   }
 
+  get to() {
+    return new ReceiverDescriptor(this);
+  }
+
   async ping() {
     return 'pong';
   }
@@ -67,21 +71,19 @@ class Obj {
   async conduct(dir, dist) {
     if (this.color !== 'red') {
       this.color = 'red';
-      await this.send(dir, dist, 'conduct', dir, dist);
+      await this.to.direction(dir, dist).send('conduct', dir, dist);
     }
   }
 
-  async send(dir, threshold, selector, ...args) {
-    return this.tsend(Obj, dir, threshold, selector, ...args);
-  }
-
-  async tsend(type, dir, threshold, selector, ...args) {
+  async send(receiverDescriptor, selector, ...args) {
     const waitTimeSecs = .1;
-    const beam = this.makeBeam(dir, threshold);
+    const beam = receiverDescriptor.toBeam();
     beams.push(beam);
 
-    const receivers = objects.filter(
-        obj => obj !== this && obj instanceof type && beam.overlapsWith(obj));
+    const receivers = objects.filter(obj =>
+        obj !== this &&
+        obj instanceof receiverDescriptor.receiverType &&
+        beam.overlapsWith(obj));
 
     async function showDebugStuff() {
       if (!debug) {
@@ -124,69 +126,6 @@ class Obj {
       throw new Error('TODO: handle exceptions...');
     }
   }
-
-  makeBeam(dir, optThreshold) {
-    let beam;
-    switch (dir) {
-      case 'up': {
-        const beamHeight = optThreshold || this.y;
-        beam = this.makeDirectionalBeam(
-          this.x,
-          this.y - beamHeight / 2,
-          this.rightX - this.leftX,
-          beamHeight);
-        break;
-      }
-      case 'down': {
-        const beamHeight = optThreshold || (canvas.height - this.y);
-        beam = this.makeDirectionalBeam(
-          this.x,
-          this.y + beamHeight / 2,
-          this.rightX - this.leftX,
-          beamHeight);
-        break;
-      }
-      case 'left': {
-        const beamWidth = optThreshold || this.x;
-        beam = this.makeDirectionalBeam(
-          this.x - beamWidth / 2,
-          this.y,
-          beamWidth,
-          this.bottomY - this.topY);
-        break;
-      }
-      case 'right': {
-        const beamWidth = optThreshold || (canvas.width - this.x);
-        beam = this.makeDirectionalBeam(
-          this.x + beamWidth / 2,
-          this.y,
-          beamWidth,
-          this.bottomY - this.topY);
-        break;
-      }
-      case 'nearby': {
-        beam = this.makeProximityBeam(optThreshold || Math.max(canvas.width, canvas.height));
-        break;
-      }
-      default: {
-        throw new Error('unknown direction ' + dir);
-      }
-    }
-    beam.sender = this;
-    return beam;
-  }
-
-  makeDirectionalBeam(x, y, width, height) {
-    const beam = new Rectangle(x, y, width, height, 'yellow');
-    beam.sender = this;
-    return beam;
-  }
-
-  makeProximityBeam(radius) {
-    const beam = new Circle(this.x, this.y, radius, 'yellow');
-    beam.sender = this;
-    return beam;
-  }
 }
 
 class Rectangle extends Obj {
@@ -219,11 +158,11 @@ class Rectangle extends Obj {
 
   overlapsWith(that) {
     if (that instanceof Rectangle) {
-      return false ||
-          this.containsPoint(that.leftX, that.topY) ||
-          this.containsPoint(that.leftX, that.bottomY) ||
-          this.containsPoint(that.rightX, that.topY) ||
-          this.containsPoint(that.rightX, that.bottomY);
+      return !(
+          this.rightX < that.leftX ||
+          this.leftX > that.rightX ||
+          this.bottomY < that.topY ||
+          this.topY > that.bottomY);
     } else if (that instanceof Circle) {
       return false ||
           this.containsPoint(that.x, that.y) ||
@@ -309,5 +248,139 @@ class Circle extends Obj {
     if (this.setStrokeStyle(ctxt, options)) {
       ctxt.stroke();
     }
+  }
+}
+
+class ReceiverDescriptor {
+  constructor(sender) {
+    this.sender = sender;
+  }
+
+  all(optReceiverType) {
+    return this.upTo(Infinity, optReceiverType);
+  }
+
+  one(optReceiverType) {
+    return this.upTo(1, optReceiverType);
+  }
+
+  upTo(maxNumReceivers, optReceiverType) {
+    this._set('maxNumReceivers', maxNumReceivers);
+    this._set('receiverType', optType);
+    return this;
+  }
+
+  left(optMaxDistance) {
+    this._set('direction', 'left');
+    this._set('maxDistance', optMaxDistance);
+    return this;
+  }
+
+  right(optMaxDistance) {
+    return this.direction('right', optMaxDistance);
+  }
+
+  up(optMaxDistance) {
+    return this.direction('up', optMaxDistance);
+  }
+
+  down(optMaxDistance) {
+    return this.direction('down', optMaxDistance);
+  }
+
+  nearby(optMaxDistance) {
+    return this.direction('nearby', optMaxDistance);
+  }
+
+  direction(direction, optMaxDistance) {
+    this._set('direction', direction);
+    this._set('maxDistance', optMaxDistance);
+    return this;
+  }
+
+  _set(prop, optValue) {
+    if (optValue && this.hasOwnProperty(prop)) {
+      throw new Error('conflicting values for ' + prop);
+    } else {
+      this[prop] = optValue;
+    }
+  }
+
+  async send(selector, ...args) {
+    this.fillInDefaults();
+    return await this.sender.send(this, selector, ...args);
+  }
+
+  fillInDefaults() {
+    if (!this.hasOwnProperty('maxNumReceivers')) {
+      this.maxNumReceivers = Infinity;
+    }
+    if (!this.hasOwnProperty('direction')) {
+      this.direction = 'nearby';
+    }
+    if (!this.hasOwnProperty('receiverType')) {
+      this.receiverType = Obj;
+    }
+    if (!this.hasOwnProperty('maxDistance')) {
+      this.maxDistance = Infinity;
+    }
+  }
+
+  toBeam() {
+    let beam;
+    switch (this.direction) {
+      case 'up': {
+        const beamHeight = Math.min(this.maxDistance, this.sender.y);
+        beam = new Rectangle(
+          this.sender.x,
+          this.sender.y - beamHeight / 2,
+          this.sender.rightX - this.sender.leftX,
+          beamHeight,
+          'yellow');
+        break;
+      }
+      case 'down': {
+        const beamHeight = Math.min(this.maxDistance, canvas.height - this.sender.y);
+        beam = new Rectangle(
+          this.sender.x,
+          this.sender.y + beamHeight / 2,
+          this.sender.rightX - this.sender.leftX,
+          beamHeight,
+          'yellow');
+        break;
+      }
+      case 'left': {
+        const beamWidth = Math.min(this.maxDistance, this.sender.x);
+        beam = new Rectangle(
+          this.sender.x - beamWidth / 2,
+          this.sender.y,
+          beamWidth,
+          this.sender.bottomY - this.sender.topY,
+          'yellow');
+        break;
+      }
+      case 'right': {
+        const beamWidth = Math.min(this.maxDistance, canvas.width - this.sender.x);
+        beam = new Rectangle(
+          this.sender.x + beamWidth / 2,
+          this.sender.y,
+          beamWidth,
+          this.sender.bottomY - this.sender.topY,
+          'yellow');
+        break;
+      }
+      case 'nearby': {
+        const maxDistance = Math.min(
+            this.maxDistance,
+            Math.max(canvas.width, canvas.height));
+        beam = new Circle(this.sender.x, this.sender.y, maxDistance, 'yellow');
+        break;
+      }
+      default: {
+        throw new Error('unknown direction ' + dir);
+      }
+    }
+    beam.sender = this;
+    return beam;
   }
 }
