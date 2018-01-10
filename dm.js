@@ -7,6 +7,14 @@ class Obj {
     this.color = color;
   }
 
+  destroy() {
+    const idx = objects.indexOf(this);
+    if (idx < 0) {
+      throw new Error('cannot destroy an object twice!');
+    }
+    objects.splice(idx, 1);
+  }
+
   get to() {
     return new ReceiverDescriptor(this);
   }
@@ -76,7 +84,7 @@ class Obj {
   }
 
   async send(receiverDescriptor, selector, ...args) {
-    const waitTimeSecs = .1;
+    const waitTimeSecs = .2;
     const beam = receiverDescriptor.toBeam(selector, args);
     beams.push(beam);
 
