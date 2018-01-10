@@ -390,7 +390,7 @@ class ReceiverDescriptor {
         throw new Error('unknown direction ' + dir);
       }
     }
-    beam.sender = this;
+    beam.sender = this.sender;
     return beam;
   }
 }
