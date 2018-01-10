@@ -77,7 +77,7 @@ class Obj {
 
   async send(receiverDescriptor, selector, ...args) {
     const waitTimeSecs = .1;
-    const beam = receiverDescriptor.toBeam();
+    const beam = receiverDescriptor.toBeam(selector, args);
     beams.push(beam);
 
     function dist(a, b) {
@@ -91,7 +91,6 @@ class Obj {
                 beam.overlapsWith(obj)).
         sort((a, b) => dist(a, beam.sender) - dist(b, beam.sender));
     receivers.length = Math.min(receivers.length, receiverDescriptor.maxNumReceivers);
-    console.log(receivers.map(obj => obj.color));
 
     async function showDebugStuff() {
       if (!debug) {
@@ -111,6 +110,15 @@ class Obj {
           isReceiver: receivers.includes(obj)
         }
         obj.drawOn(ctxt, options);
+      }
+      for (let idx = 0; idx < beams.length; idx++) {
+        const beam = beams[idx];
+        const label = `${beam.selector}(${beam.args.map(stringify).join(', ')})`;
+        const x = canvas.width - 200;
+        const y = canvas.height - 30 * (idx + 1);
+        ctxt.font = '12pt Avenir';
+        ctxt.fillStyle = 'white';
+        ctxt.fillText(label, x, y);
       }
       await seconds(waitTimeSecs);
     }
@@ -336,7 +344,7 @@ class ReceiverDescriptor {
     }
   }
 
-  toBeam() {
+  toBeam(selector, args) {
     let beam;
     switch (this.direction) {
       case 'up': {
@@ -391,6 +399,25 @@ class ReceiverDescriptor {
       }
     }
     beam.sender = this.sender;
+    beam.selector = selector;
+    beam.args = args;
     return beam;
+  }
+}
+
+function stringify(x) {
+  if (x === null || typeof x === 'number' || typeof x === 'undefined') {
+    return '' + x;
+  } else if (typeof x === 'string') {
+    return JSON.stringify(x);
+  } else if (typeof x === 'function') {
+    return 'fn';
+  } else if (x instanceof Array) {
+    return '[' + x.map(stringify).join(', ') + ']';
+  } else if (typeof x === 'object') {
+    return '{' + Object.keys(x).map(k => k + ': ' + stringify(x[k])).join(', ') + '}';
+  } else {
+    console.info(typeof x, x);
+    return '?';
   }
 }

@@ -4,7 +4,6 @@ Direct Messaging
 TODO
 ----
 
-* show stack in debug mode
 * write space invaders
   * can i use a message to find out if an object has an overlap with another?
     - what would we illuminate?
