@@ -92,34 +92,45 @@ class Obj {
         sort((a, b) => dist(a, beam.sender) - dist(b, beam.sender));
     receivers.length = Math.min(receivers.length, receiverDescriptor.maxNumReceivers);
 
+    let receiver;
+
     async function showDebugStuff() {
       if (!debug) {
         return;
       }
       ctxt.clearRect(0, 0, canvas.width, canvas.height);
-      const dampingFactor = 0.8;
-      ctxt.globalAlpha = 0.25 * Math.pow(dampingFactor, beams.length - 1);
+      const beamDampingFactor = 0.8;
+      ctxt.globalAlpha = 0.25 * Math.pow(beamDampingFactor, beams.length - 1);
       for (let beam of beams) {
         beam.drawOn(ctxt);
-        ctxt.globalAlpha /= dampingFactor;
+        ctxt.globalAlpha /= beamDampingFactor;
       }
       ctxt.globalAlpha = 1;
       for (let obj of objects) {
         const options = {
           isSender: obj === beam.sender,
-          isReceiver: receivers.includes(obj)
+          isReceiver: receivers.includes(obj),
+          isCurrentReceiver: obj === receiver
         }
         obj.drawOn(ctxt, options);
       }
-      for (let idx = 0; idx < beams.length; idx++) {
-        const beam = beams[idx];
+
+      ctxt.font = '12pt Avenir';
+      const textDampingFactor = 0.45;
+      ctxt.globalAlpha = Math.pow(textDampingFactor, beams.length - 1);
+      for (let beam of beams) {
         const label = `${beam.selector}(${beam.args.map(stringify).join(', ')})`;
-        const x = canvas.width - 200;
-        const y = canvas.height - 30 * (idx + 1);
-        ctxt.font = '12pt Avenir';
-        ctxt.fillStyle = 'white';
+        const width = ctxt.measureText(label).width;
+        const height = 12;
+        const x = beam.sender.x - width / 2;
+        const y = beam.sender.y + height / 2;
+        ctxt.fillStyle = 'black';
+        ctxt.fillText(label, x + 2, y + 2);
+        ctxt.fillStyle = 'yellow';
         ctxt.fillText(label, x, y);
+        ctxt.globalAlpha /= textDampingFactor;
       }
+      ctxt.globalAlpha = 1;
       await seconds(waitTimeSecs);
     }
 
@@ -127,15 +138,19 @@ class Obj {
 
     const responses = [];
     try {
-      for (let receiver of receivers) {
+      for (receiver of receivers) {
         const result = await (async () => {
+          await showDebugStuff();
           const ans = await receiver[selector](...args);
           return ans;
         })();
         responses.push({receiver, result});
       }
+      if (receivers.length > 0) {
+        receiver = null;
+        await showDebugStuff();
+      }
       beams.pop();
-      await showDebugStuff();
       return responses;
     } catch (e) {
       console.error(e);
