@@ -299,7 +299,9 @@ class ReceiverDescriptor {
   }
 
   _set(prop, optValue) {
-    if (optValue && this.hasOwnProperty(prop)) {
+    if (optValue === undefined) {
+      // no-op
+    } else if (this.hasOwnProperty(prop) && this[prop] !== optValue) {
       throw new Error('conflicting values for ' + prop);
     } else {
       this[prop] = optValue;
