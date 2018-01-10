@@ -14,8 +14,8 @@ const juicedUpRectangle = new Rectangle(200, 200, 100, 35, 'orange');
 juicedUpRectangle.origWidth = juicedUpRectangle.width;
 juicedUpRectangle.origHeight = juicedUpRectangle.height;
 juicedUpRectangle.step = function(t) {
-  this.width = this.origWidth + this.origWidth / 10 * Math.sin(t/60);
-  this.height = this.origHeight + this.origHeight / 10 * Math.cos(t/60);
+  this.width = this.origWidth + 0.1 * this.origWidth * Math.sin(t / 60 / (2 * Math.PI));
+  this.height = this.origHeight + 0.1 * this.origHeight * Math.cos(t / 60 / (2 * Math.PI));
 };
 
 const objects = [
@@ -48,6 +48,7 @@ canvas.onmousemove = e => {
 };
 
 document.body.onmousedown = e => {
+  mouse.buttonIsDown = true;
   mouse.targetObj = null;
   for (let idx = objects.length - 1; idx >= 0; idx--) {
     const obj = objects[idx];
@@ -59,7 +60,6 @@ document.body.onmousedown = e => {
       objects.push(obj);
     }
   }
-  mouse.buttonIsDown = true;
 };
 
 document.body.onmouseup = e => {
@@ -98,8 +98,8 @@ document.body.onkeydown = e => {
     default:
       return;
   }
-  const selector = 'conduct';
-  const args = [descriptor.direction, maxDistance];
+  const selector = 'infect';
+  const args = [descriptor.direction];
   scheduledSends.push({descriptor, selector, args});
 };
 

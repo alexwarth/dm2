@@ -76,10 +76,10 @@ class Obj {
     // no-op
   }
 
-  async conduct(dir, dist) {
+  async infect(direction) {
     if (this.color !== 'red') {
       this.color = 'red';
-      await this.to.direction(dir, dist).send('conduct', dir, dist);
+      await this.to.direction(direction, 100).send('infect', direction);
     }
   }
 
