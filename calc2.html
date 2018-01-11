@@ -10,40 +10,58 @@
 
 debug = false;
 
-class Num extends Circle {
-  constructor(x, y, value) {
-    super(x, y, 30, 'cornflowerblue');
-    this.value = value;
-  }
-
-  drawOn(ctxt, options) {
-    super.drawOn(ctxt, options);
-    ctxt.font = '12pt Monaco';
-    ctxt.fillStyle = 'yellow';
-    const text = '' + this.value;
-    const x = this.x - ctxt.measureText(text).width / 2;
-    const y = this.y + 6;
-    ctxt.fillText(text, x, y);
-  }
-}
-
-class Op extends Rectangle {
-  constructor(x, y, minArity, maxArity) {
-    super(x, y, 50, 50 * minArity, 'indigo');
-    this.minArity = minArity;
-    this.maxArity = maxArity || minArity;
+class CalcObj extends Rectangle {
+  constructor(x, y, color, optInput) {
+    super(x, y, 50, 50, color);
     this.operands = [];
+    this.acceptInput(optInput !== undefined ? optInput : '() => {}');
+  }
+
+  acceptInput(str) {
+    const parts = /([a-zA-Z0-9_]+):(.*)/.exec(str);
+    if (parts === null) {
+      this.setValueFnFromString(str);
+      this.labelStr = str;
+    } else {
+      this.setValueFnFromString(parts[2]);
+      this.setLabelFromString(parts[1]);
+    }
+  }
+
+  setValueFnFromString(str) {
+    return this.setValueFn(eval(str));
+  }
+
+  setValueFn(fn) {
+    if (typeof fn !== 'function') {
+      const val = fn;
+      fn = () => val;
+    }
+    this.valueFn = fn;
+    let argNames = fn.toString().split('=>')[0].replace(/[\(\)\ ]/g, '').split(',');
+    if (argNames.length === 1 && argNames[0].length === 0) {
+      argNames = [];
+    }
+    const hasRestArg = argNames.length > 0 && argNames[argNames.length - 1].startsWith('...');
+    this.minArity = Math.max(0, hasRestArg ? argNames.length - 1 : argNames.length);
+    this.maxArity = hasRestArg ? Infinity : this.minArity;
+  }
+
+  setLabelFromString(str) {
+    try {
+      const fn = eval(str);
+      if (typeof fn === 'function') {
+        this.labelFn = fn;
+      }
+    } catch (e) {}
+    this.labelStr = str;
   }
 
   get label() {
-    throw new Error('subclass responsibility');
+    return this.labelFn ? this.labelFn(this.value) : this.labelStr;
   }
 
-  eval(...args) {
-    throw new Error('subclass responsibility');
-  }
-
-  async step(t) {
+  async step() {
     this.value = undefined;
     const responses = await this.to.left(200).upTo(this.maxArity).send('ping');
     this.operands = responses.map(response => response.receiver);
@@ -51,9 +69,13 @@ class Op extends Rectangle {
       const values = this.operands.map(operand => operand.value);
       this.value = values.some(value => value === undefined) ?
           undefined :
-          this.eval(...values);
+          this.valueFn(...values);
     }
-    this.height = Math.max(50 * this.minArity, this.operands.length * 50);
+
+    const label = this.label;
+    ctxt.font = '12pt Monaco';
+    this.width = 30 + ctxt.measureText(label).width;
+    this.height = Math.max(50 * Math.max(this.minArity, 1), this.operands.length * 50);
   }
 
   drawUnderOn(ctxt, options) {
@@ -76,74 +98,11 @@ class Op extends Rectangle {
   }
 }
 
-class PassThrough extends Op {
-  constructor(x, y) {
-    super(x, y, 1);
-  }
-
-  eval(a) {
-    return a;
-  }
-
-  get label() {
-    return this.value === undefined ? '?' : this.value;
-  }
-}
-
-class MAdd extends Op {
-  constructor(x, y) {
-    super(x, y, 1, Infinity);
-  }
-
-  eval(...args) {
-    return args.reduce((a, b) => a + b, 0);
-  }
-
-  get label() {
-    return '++';
-  }
-}
-
-class Add extends Op {
-  constructor(x, y) {
-    super(x, y, 2);
-  }
-
-  eval(a, b) {
-    return a + b;
-  }
-
-  get label() {
-    return '+';
-  }
-}
-
-class Mul extends Op {
-  constructor(x, y) {
-    super(x, y, 2);
-  }
-
-  eval(a, b) {
-    return a * b;
-  }
-
-  get label() {
-    return '*';
-  }
-}
-
 objects = [
-  new Num(100, 100, 1),
-  new Num(200, 100, 5),
-  new Num(300, 100, 42),
-  new Num(100, 200, 7),
-  new Add(400, 200),
-  new Add(300, 450),
-  new Mul(100, 300),
-  new PassThrough(500, 300),
-  new PassThrough(525, 360),
-  new PassThrough(550, 450),
-  new MAdd(800, 300)
+  new CalcObj(100, 120, 'cornflowerblue', '1'),
+  new CalcObj(100, 180, 'steelblue', '5'),
+  new CalcObj(200, 150, 'indigo', 'plus: (a, b) => a + b'),
+  new CalcObj(300, 150, 'maroon', 'a => a')
 ];
 
     </script>
