@@ -25,16 +25,13 @@ class Num extends Circle {
     const y = this.y + 6;
     ctxt.fillText(text, x, y);
   }
-
-  async step(t) {
-    // TODO
-  }
 }
 
 class Op extends Rectangle {
-  constructor(x, y, arity) {
-    super(x, y, 50, 50 * arity, 'indigo');
-    this.arity = arity;
+  constructor(x, y, minArity, maxArity) {
+    super(x, y, 50, 50 * minArity, 'indigo');
+    this.minArity = minArity;
+    this.maxArity = maxArity || minArity;
     this.operands = [];
   }
 
@@ -42,19 +39,21 @@ class Op extends Rectangle {
     throw new Error('subclass responsibility');
   }
 
-  eval(a, b) {
+  eval(...args) {
     throw new Error('subclass responsibility');
   }
 
   async step(t) {
-    const responses = await this.to.left(200).upTo(this.arity).send('ping');
+    this.value = undefined;
+    const responses = await this.to.left(200).upTo(this.maxArity).send('ping');
     this.operands = responses.map(response => response.receiver);
-    if (this.operands.length === this.arity) {
+    if (this.operands.length >= this.minArity) {
       const values = this.operands.map(operand => operand.value);
       this.value = values.some(value => value === undefined) ?
           undefined :
           this.eval(...values);
     }
+    this.height = Math.max(50 * this.minArity, this.operands.length * 50);
   }
 
   drawUnderOn(ctxt, options) {
@@ -88,6 +87,20 @@ class PassThrough extends Op {
 
   get label() {
     return this.value === undefined ? '?' : this.value;
+  }
+}
+
+class MAdd extends Op {
+  constructor(x, y) {
+    super(x, y, 1, Infinity);
+  }
+
+  eval(...args) {
+    return args.reduce((a, b) => a + b, 0);
+  }
+
+  get label() {
+    return '++';
   }
 }
 
@@ -130,6 +143,7 @@ objects = [
   new PassThrough(500, 300),
   new PassThrough(525, 360),
   new PassThrough(550, 450),
+  new MAdd(800, 300)
 ];
 
     </script>

@@ -91,7 +91,7 @@ class Obj {
   }
 
   async send(receiverDescriptor, selector, ...args) {
-    const waitTimeSecs = .1;
+    const waitTimeSecs = .5;
     const beam = receiverDescriptor.toBeam(selector, args);
     beams.push(beam);
 
