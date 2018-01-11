@@ -1,5 +1,7 @@
 'use strict';
 
+let debug = true;
+
 class Obj {
   constructor(x, y, color) {
     this.x = x;
@@ -47,6 +49,11 @@ class Obj {
     throw new Error('subclass responsibility');
   }
 
+  // TODO: come up with a better name for this
+  drawUnderOn(ctxt, options) {
+    // no-op
+  }
+
   drawOn(ctxt, options) {
     throw new Error('subclass responsibility');
   }
@@ -84,7 +91,7 @@ class Obj {
   }
 
   async send(receiverDescriptor, selector, ...args) {
-    const waitTimeSecs = .2;
+    const waitTimeSecs = .1;
     const beam = receiverDescriptor.toBeam(selector, args);
     beams.push(beam);
 
@@ -95,8 +102,8 @@ class Obj {
     const receivers = objects.
         filter(obj =>
             obj !== this &&
-              obj instanceof receiverDescriptor.receiverType &&
-                beam.overlapsWith(obj)).
+            obj instanceof receiverDescriptor.receiverType &&
+            beam.overlapsWith(obj)).
         sort((a, b) => dist(a, beam.sender) - dist(b, beam.sender));
     receivers.length = Math.min(receivers.length, receiverDescriptor.maxNumReceivers);
 
@@ -114,6 +121,14 @@ class Obj {
         ctxt.globalAlpha /= beamDampingFactor;
       }
       ctxt.globalAlpha = 1;
+      for (let obj of objects) {
+        const options = {
+          isSender: obj === beam.sender,
+          isReceiver: receivers.includes(obj),
+          isCurrentReceiver: obj === receiver
+        }
+        obj.drawUnderOn(ctxt, options);
+      }
       for (let obj of objects) {
         const options = {
           isSender: obj === beam.sender,
@@ -217,8 +232,10 @@ class Rectangle extends Obj {
   drawOn(ctxt, options) {
     ctxt.fillStyle = this.color;
     ctxt.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+    const oldLineWidth = ctxt.lineWidth;
     if (this.setStrokeStyle(ctxt, options)) {
       ctxt.strokeRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+      ctxt.lineWidth = oldLineWidth;
     }
   }
 }
@@ -444,3 +461,115 @@ function stringify(x) {
     return '?';
   }
 }
+
+function seconds(s) {
+  return new Promise(resolve => {
+    setTimeout(resolve, s * 1000);
+  });
+}
+
+const mouse = {
+  x: -10,
+  y: -10,
+  buttonIsDown: false,
+  targetObj: null,
+  targetObjOffsetX: 0,
+  targetObjectOffsetY: 0
+};
+
+const ctxt = canvas.getContext('2d');
+
+canvas.onmousemove = e => {
+  mouse.x = e.offsetX;
+  mouse.y = e.offsetY;
+  if (mouse.targetObj) {
+    mouse.targetObj.x = mouse.x - mouse.targetObjOffsetX;
+    mouse.targetObj.y = mouse.y - mouse.targetObjOffsetY;
+  }
+};
+
+document.body.onmousedown = e => {
+  mouse.buttonIsDown = true;
+  mouse.targetObj = null;
+  for (let idx = objects.length - 1; idx >= 0; idx--) {
+    const obj = objects[idx];
+    if (!mouse.targetObj && obj.containsPoint(mouse.x, mouse.y)) {
+      mouse.targetObj = obj;
+      mouse.targetObjOffsetX = mouse.x - obj.x;
+      mouse.targetObjOffsetY = mouse.y - obj.y;
+      objects.splice(objects.indexOf(obj), 1);
+      objects.push(obj);
+    }
+  }
+};
+
+document.body.onmouseup = e => {
+  mouse.buttonIsDown = false;
+  mouse.targetObj = null;
+};
+
+document.body.onkeydown = e => {
+  if (e.code === 'Space') {
+    debug = !debug;
+    return;
+  }
+  if (!mouse.targetObj) {
+    return;
+  }
+  const descriptor = new ReceiverDescriptor(mouse.targetObj);
+  const maxDistance = e.shiftKey ? undefined : 100;
+  switch (e.code) {
+    case 'KeyW':
+      descriptor.up(maxDistance);
+      break;
+    case 'KeyX':
+      descriptor.down(maxDistance);
+      break;
+    case 'KeyA':
+      descriptor.left(maxDistance);
+      break;
+    case 'KeyD':
+      descriptor.right(maxDistance);
+      break;
+    case 'KeyS':
+      descriptor.nearby(maxDistance);
+      break;
+    default:
+      return;
+  }
+  const selector = 'infect';
+  const args = [descriptor.direction];
+  scheduledSends.push({descriptor, selector, args});
+};
+
+let objects;
+const beams = [];
+let scheduledSends = [];
+let t = 0;
+
+async function main(t) {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  for (let obj of objects) {
+    await obj.step(t);
+  }
+  t++;
+
+  ctxt.clearRect(0, 0, canvas.width, canvas.height);
+  for (let obj of objects) {
+    obj.drawUnderOn(ctxt);
+  }
+  for (let obj of objects) {
+    obj.drawOn(ctxt);
+  }
+
+  if (scheduledSends.length > 0) {
+    const {descriptor, selector, args} = scheduledSends.shift();
+    await descriptor.send(selector, ...args);
+  }
+
+  requestAnimationFrame(main);
+}
+
+requestAnimationFrame(main);
