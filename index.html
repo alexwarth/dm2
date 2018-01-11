@@ -8,7 +8,14 @@
 
 'use strict';
 
-// this.to.one(Alien).up().send('switchDirection')
+
+Obj.prototype.infect = async function(direction) {
+  if (this.color !== 'red') {
+    this.color = 'red';
+    await this.to.direction(direction, 100).send('infect', direction);
+    // this.to.all(Alien).right().send('turnAround')
+  }
+};
 
 function makeJuicedUpRectangle(x, y, w, h, c) {
   const r = new Rectangle(x, y, w, h, c);

@@ -83,13 +83,6 @@ class Obj {
     // no-op
   }
 
-  async infect(direction) {
-    if (this.color !== 'red') {
-      this.color = 'red';
-      await this.to.direction(direction, 100).send('infect', direction);
-    }
-  }
-
   async send(receiverDescriptor, selector, ...args) {
     const waitTimeSecs = .5;
     const beam = receiverDescriptor.toBeam(selector, args);
