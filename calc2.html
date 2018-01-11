@@ -1,0 +1,151 @@
+<html>
+  <body style="margin: 0; background: black;">
+    <div style="text-align: center;">
+      <canvas id="canvas"></canvas>
+    </div>
+    <script src="dm.js"></script>
+    <script>
+
+'use strict';
+
+debug = false;
+
+class Num extends Circle {
+  constructor(x, y, value) {
+    super(x, y, 30, 'cornflowerblue');
+    this.value = value;
+  }
+
+  drawOn(ctxt, options) {
+    super.drawOn(ctxt, options);
+    ctxt.font = '12pt Monaco';
+    ctxt.fillStyle = 'yellow';
+    const text = '' + this.value;
+    const x = this.x - ctxt.measureText(text).width / 2;
+    const y = this.y + 6;
+    ctxt.fillText(text, x, y);
+  }
+}
+
+class Op extends Rectangle {
+  constructor(x, y, minArity, maxArity) {
+    super(x, y, 50, 50 * minArity, 'indigo');
+    this.minArity = minArity;
+    this.maxArity = maxArity || minArity;
+    this.operands = [];
+  }
+
+  get label() {
+    throw new Error('subclass responsibility');
+  }
+
+  eval(...args) {
+    throw new Error('subclass responsibility');
+  }
+
+  async step(t) {
+    this.value = undefined;
+    const responses = await this.to.left(200).upTo(this.maxArity).send('ping');
+    this.operands = responses.map(response => response.receiver);
+    if (this.operands.length >= this.minArity) {
+      const values = this.operands.map(operand => operand.value);
+      this.value = values.some(value => value === undefined) ?
+          undefined :
+          this.eval(...values);
+    }
+    this.height = Math.max(50 * this.minArity, this.operands.length * 50);
+  }
+
+  drawUnderOn(ctxt, options) {
+    for (let operand of this.operands) {
+      ctxt.strokeStyle = 'yellow';
+      ctxt.moveTo(this.x, this.y);
+      ctxt.lineTo(operand.x, operand.y);
+      ctxt.stroke();
+    }
+  }
+
+  drawOn(ctxt, options) {
+    super.drawOn(ctxt, options);
+    ctxt.font = '12pt Monaco';
+    ctxt.fillStyle = 'yellow';
+    const text = this.label;
+    const x = this.x - ctxt.measureText(text).width / 2;
+    const y = this.y + 6;
+    ctxt.fillText(text, x, y);
+  }
+}
+
+class PassThrough extends Op {
+  constructor(x, y) {
+    super(x, y, 1);
+  }
+
+  eval(a) {
+    return a;
+  }
+
+  get label() {
+    return this.value === undefined ? '?' : this.value;
+  }
+}
+
+class MAdd extends Op {
+  constructor(x, y) {
+    super(x, y, 1, Infinity);
+  }
+
+  eval(...args) {
+    return args.reduce((a, b) => a + b, 0);
+  }
+
+  get label() {
+    return '++';
+  }
+}
+
+class Add extends Op {
+  constructor(x, y) {
+    super(x, y, 2);
+  }
+
+  eval(a, b) {
+    return a + b;
+  }
+
+  get label() {
+    return '+';
+  }
+}
+
+class Mul extends Op {
+  constructor(x, y) {
+    super(x, y, 2);
+  }
+
+  eval(a, b) {
+    return a * b;
+  }
+
+  get label() {
+    return '*';
+  }
+}
+
+objects = [
+  new Num(100, 100, 1),
+  new Num(200, 100, 5),
+  new Num(300, 100, 42),
+  new Num(100, 200, 7),
+  new Add(400, 200),
+  new Add(300, 450),
+  new Mul(100, 300),
+  new PassThrough(500, 300),
+  new PassThrough(525, 360),
+  new PassThrough(550, 450),
+  new MAdd(800, 300)
+];
+
+    </script>
+  </body>
+</html>
