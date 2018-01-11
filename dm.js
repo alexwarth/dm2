@@ -301,8 +301,10 @@ class Circle extends Obj {
     ctxt.beginPath();
     ctxt.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
     ctxt.fill();
+    const oldLineWidth = ctxt.lineWidth;
     if (this.setStrokeStyle(ctxt, options)) {
       ctxt.stroke();
+      ctxt.lineWidth = oldLineWidth;
     }
   }
 }
