@@ -321,6 +321,15 @@ document.body.addEventListener('mouseup', e => {
   console.log(db.toString());
 });
 
+const host = window.document.location.host.replace(/:.*/, '')
+let ws = new WebSocket('ws://' + host + ':8080')
+ws.onmessage = (event) => {
+  const assertion = JSON.parse(event.data)
+  if (typeof assertion == 'Array') {
+    db.assert(assertion)
+  }
+}
+
     </script>
   </body>
 </html>

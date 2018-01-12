@@ -1,0 +1,14 @@
+{
+  "name": "dm2",
+  "version": "1.0.0",
+  "main": "server.js",
+  "repository": "git@github.com:alexwarth/dm2.git",
+  "author": "Jonathan Dahan <hi@jonathan.is>",
+  "license": "MIT",
+  "dependencies": {
+    "koa": "^2.4.1",
+    "koa-route": "^3.2.0",
+    "koa-static": "^4.0.2",
+    "koa-websocket": "^4.1.0"
+  }
+}
