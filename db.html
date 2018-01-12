@@ -116,7 +116,7 @@ orchestrator.addProcess(
         rectangle.drawOn = () => {}
         rectangle.drawOverOn = context => {
           context.fillStyle = 'lightyellow'
-          context.fillText($c, $x - ctxt.measureText($c).width / 2, $y - 6)
+          context.fillText($c, $x - ctxt.measureText($c).width / 2, $y + 6)
         }
         objects.push(rectangle)
       }
