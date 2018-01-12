@@ -40,7 +40,7 @@ class Orchestrator extends Rectangle {
 const orchestrator = new Orchestrator();
 objects.push(orchestrator);
 
-let targetObjFact = null;
+let targetObjId = null;
 
 let nextIdNum = 1;
 function makeNewId() {
@@ -66,27 +66,31 @@ document.body.addEventListener('mousedown', e => {
   } else if (e.metaKey) {
     // TODO(jonathan): make a square!
   } else {
-    targetObjFact = mouse.targetObj && mouse.targetObj.fact;
+    targetObjId = mouse.targetObj && mouse.targetObj.fact[0];
   }
 });
 
 document.body.addEventListener('mousemove', e => {
-  if (!targetObjFact) {
+  if (!targetObjId) {
     return;
   }
-  // Could just modify fact in place, but that's an optimization
-  // and optimizations are evil.
-  db.retract(targetObjFact);
-  targetObjFact = targetObjFact.slice();
-  targetObjFact[5] = mouse.x;
-  targetObjFact[7] = mouse.y;
-  db.assert(targetObjFact);
+
+  db.query(
+    [[targetObjId, 'is a', '$t', 'at', '(', '$x', ',', '$y', ')']],
+    ({targetObjId, $t, $x, $y}, facts, assert, retract) => {
+      retract(facts[0]);
+      const newFact = facts[0].slice();
+      newFact[5] = mouse.x;
+      newFact[7] = mouse.y;
+      assert(newFact);  // TODO: don't want provenance here!
+    });
+
   console.log('-----');
   console.log(db.toString());
 });
 
 document.body.addEventListener('mouseup', e => {
-  targetObjFact = null;
+  targetObjId = null;
 });
 
     </script>
