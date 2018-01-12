@@ -12,16 +12,30 @@
 const db = new Database(
   ['C1', 'is a', 'circle', 'at', '(', 300, ',', 300, ')'],
   ['C1', '\'s', 'color', 'is', 'cornflowerblue'],
-  ['C1', '\'s', 'radius', 'is', 50]
+  ['C1', '\'s', 'radius', 'is', 50],
+  ['R1', 'is a', 'rectangle', 'at', '(', 150, ',', 150, ')'],
+  ['R1', '\'s', 'width', 'is', 50],
+  ['R1', '\'s', 'height', 'is', 100],
+  ['R1', '\'s', 'color', 'is', 'salmon'],
 );
 
 class Orchestrator extends Rectangle {
-  constructor() {
-    super(20, 20, 30, 30, 'indigo');
+  constructor(...processes) {
+    super(20, 20, 30, 30, 'indigo')
+    this.processes = processes
   }
 
   async step(t) {
-    objects = [this];
+    objects = [this, ...this.processes];
+  }
+}
+
+class CircleIlluminator extends Rectangle {
+  constructor() {
+    super(60, 20, 30, 30, 'steelblue')
+  }
+
+  async step(t) {
     db.query(
       [
         ['$c', 'is a', 'circle', 'at', '(', '$x', ',', '$y', ')'],
@@ -37,7 +51,57 @@ class Orchestrator extends Rectangle {
   }
 }
 
-const orchestrator = new Orchestrator();
+class ObjectLabeller extends Rectangle {
+  constructor() {
+    super(20, 100, 30, 30, 'lightyellow')
+  }
+
+  async step(t) {
+    db.query(
+      [
+        ['$c', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')'],
+      ],
+      ({$c, $x, $y, $h}, facts, assert, retract) => {
+        const rectangle = new Rectangle($x, $y, 20, 20, 'steelblue')
+        rectangle.drawOn = () => {}
+        rectangle.drawOverOn = (context) => {
+          console.log(`drawing label`)
+          context.fillStyle = 'lightyellow'
+          context.fillText($c, $x, $y - 10)
+        }
+        objects.push(rectangle)
+      }
+    )
+  }
+}
+
+class RectIlluminator extends Rectangle {
+  constructor() {
+    super(20, 60, 30, 30, 'salmon')
+  }
+
+  async step(t) {
+    db.query(
+      [
+        ['$r', 'is a', 'rectangle', 'at', '(', '$x', ',', '$y', ')'],
+        ['$r', '\'s', 'width', 'is', '$w'],
+        ['$r', '\'s', 'height', 'is', '$h'],
+        ['$r', '\'s', 'color', 'is', '$color'],
+      ],
+      ({$x, $y, $w, $h, $color}, facts, assert, retract) => {
+        const r = new Rectangle($x, $y, $w, $h, $color)
+        r.fact = facts[0];
+        objects.push(r);
+      }
+    )
+  }
+}
+
+const rectangle_illuminator = new RectIlluminator();
+const circle_illuminator = new CircleIlluminator();
+const object_labeler = new ObjectLabeller();
+
+const orchestrator = new Orchestrator(rectangle_illuminator, circle_illuminator, object_labeler);
 objects.push(orchestrator);
 
 let targetObjId = null;
@@ -64,7 +128,16 @@ document.body.addEventListener('mousedown', e => {
     console.log('---');
     console.log(db.toString());
   } else if (e.metaKey) {
-    // TODO(jonathan): make a square!
+    const obj = makeNewId();
+    const facts = [
+      [obj, 'is a', 'rectangle', 'at', '(', mouse.x, ',', mouse.y, ')'],
+      [obj, '\'s', 'width', 'is', 50 + (Math.random() - .5) * 20],
+      [obj, '\'s', 'height', 'is', 50 + (Math.random() - .5) * 20],
+      [obj, '\'s', 'color', 'is', randomColor()]
+    ];
+    db.assert(...facts);
+    console.log('---');
+    console.log(db.toString());
   } else {
     targetObjId = mouse.targetObj && mouse.targetObj.fact[0];
   }
