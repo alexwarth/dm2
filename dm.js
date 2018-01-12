@@ -547,6 +547,9 @@ async function main(t) {
   for (let obj of objects) {
     obj.drawOn(ctxt);
   }
+  for (let obj of objects) {
+    obj.drawOverOn(ctxt);
+  }
 
   if (scheduledSends.length > 0) {
     const {descriptor, selector, args} = scheduledSends.shift();
