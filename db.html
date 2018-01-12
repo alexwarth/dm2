@@ -28,14 +28,25 @@ class Orchestrator extends Rectangle {
   async step(t) {
     objects = [this, ...this.processes];
   }
+
+  addProcess(name, color, fn) {
+    const lastObj = this.processes.length === 0 ?
+        this :
+        this.processes[this.processes.length - 1];
+    const process = new Rectangle(20, lastObj.y + 40, 30, 30, color);
+    process.name = name;
+    process.step = fn;
+    this.processes.push(process);
+  }
 }
 
-class CircleIlluminator extends Rectangle {
-  constructor() {
-    super(60, 20, 30, 30, 'steelblue')
-  }
+const orchestrator = new Orchestrator();
+objects.push(orchestrator);
 
-  async step(t) {
+orchestrator.addProcess(
+  'circle illuminator',
+  'steelblue',
+  () => {
     db.query(
       [
         ['$c', 'is a', 'circle', 'at', '(', '$x', ',', '$y', ')'],
@@ -48,15 +59,31 @@ class CircleIlluminator extends Rectangle {
         objects.push(c);
       }
     );
-  }
-}
+  });
 
-class ObjectLabeller extends Rectangle {
-  constructor() {
-    super(20, 100, 30, 30, 'lightyellow')
-  }
+orchestrator.addProcess(
+  'rectangle illuminator',
+  'salmon',
+  () => {
+    db.query(
+      [
+        ['$r', 'is a', 'rectangle', 'at', '(', '$x', ',', '$y', ')'],
+        ['$r', '\'s', 'width', 'is', '$w'],
+        ['$r', '\'s', 'height', 'is', '$h'],
+        ['$r', '\'s', 'color', 'is', '$color'],
+      ],
+      ({$x, $y, $w, $h, $color}, facts, assert, retract) => {
+        const r = new Rectangle($x, $y, $w, $h, $color)
+        r.fact = facts[0];
+        objects.push(r);
+      }
+    )
+  });
 
-  async step(t) {
+orchestrator.addProcess(
+  'object labeler',
+  'lightyellow',
+  () => {
     db.query(
       [
         ['$c', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')'],
@@ -72,37 +99,7 @@ class ObjectLabeller extends Rectangle {
         objects.push(rectangle)
       }
     )
-  }
-}
-
-class RectIlluminator extends Rectangle {
-  constructor() {
-    super(20, 60, 30, 30, 'salmon')
-  }
-
-  async step(t) {
-    db.query(
-      [
-        ['$r', 'is a', 'rectangle', 'at', '(', '$x', ',', '$y', ')'],
-        ['$r', '\'s', 'width', 'is', '$w'],
-        ['$r', '\'s', 'height', 'is', '$h'],
-        ['$r', '\'s', 'color', 'is', '$color'],
-      ],
-      ({$x, $y, $w, $h, $color}, facts, assert, retract) => {
-        const r = new Rectangle($x, $y, $w, $h, $color)
-        r.fact = facts[0];
-        objects.push(r);
-      }
-    )
-  }
-}
-
-const rectangle_illuminator = new RectIlluminator();
-const circle_illuminator = new CircleIlluminator();
-const object_labeler = new ObjectLabeller();
-
-const orchestrator = new Orchestrator(rectangle_illuminator, circle_illuminator, object_labeler);
-objects.push(orchestrator);
+  });
 
 let targetObjId = null;
 
