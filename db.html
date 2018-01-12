@@ -63,11 +63,13 @@ class ObjectLabeller extends Rectangle {
       ],
       ({$c, $x, $y, $h}, facts, assert, retract) => {
         const rectangle = new Rectangle($x, $y, 20, 20, 'steelblue')
+        rectangle.drawOn = () => {}
         rectangle.drawOverOn = (context) => {
+          console.log(`drawing label`)
           context.fillStyle = 'lightyellow'
-          context.fillText($c, $x, $y - ($h / 2) - 10)
+          context.fillText($c, $x, $y - 10)
         }
-        objects.push(r)
+        objects.push(rectangle)
       }
     )
   }
@@ -126,7 +128,16 @@ document.body.addEventListener('mousedown', e => {
     console.log('---');
     console.log(db.toString());
   } else if (e.metaKey) {
-    // TODO(jonathan): make a square!
+    const obj = makeNewId();
+    const facts = [
+      [obj, 'is a', 'rectangle', 'at', '(', mouse.x, ',', mouse.y, ')'],
+      [obj, '\'s', 'width', 'is', 50 + (Math.random() - .5) * 20],
+      [obj, '\'s', 'height', 'is', 50 + (Math.random() - .5) * 20],
+      [obj, '\'s', 'color', 'is', randomColor()]
+    ];
+    db.assert(...facts);
+    console.log('---');
+    console.log(db.toString());
   } else {
     targetObjFact = mouse.targetObj && mouse.targetObj.fact;
   }
