@@ -474,16 +474,16 @@ const mouse = {
 
 const ctxt = canvas.getContext('2d');
 
-canvas.onmousemove = e => {
+canvas.addEventListener('mousemove', e => {
   mouse.x = e.offsetX;
   mouse.y = e.offsetY;
   if (mouse.targetObj) {
     mouse.targetObj.x = mouse.x - mouse.targetObjOffsetX;
     mouse.targetObj.y = mouse.y - mouse.targetObjOffsetY;
   }
-};
+});
 
-document.body.onmousedown = e => {
+document.body.addEventListener('mousedown', e => {
   mouse.buttonIsDown = true;
   mouse.targetObj = null;
   for (let idx = objects.length - 1; idx >= 0; idx--) {
@@ -496,14 +496,14 @@ document.body.onmousedown = e => {
       objects.push(obj);
     }
   }
-};
+});
 
-document.body.onmouseup = e => {
+document.body.addEventListener('mouseup', e => {
   mouse.buttonIsDown = false;
   mouse.targetObj = null;
-};
+});
 
-document.body.onkeydown = e => {
+document.body.addEventListener('keydown', e => {
   if (e.code === 'Space') {
     debug = !debug;
     return;
@@ -535,7 +535,7 @@ document.body.onkeydown = e => {
   const selector = 'infect';
   const args = [descriptor.direction];
   scheduledSends.push({descriptor, selector, args});
-};
+});
 
 let objects;
 const beams = [];
