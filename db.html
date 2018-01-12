@@ -63,9 +63,9 @@ class ObjectLabeller extends Rectangle {
       ],
       ({$c, $x, $y, $h}, facts, assert, retract) => {
         const rectangle = new Rectangle($x, $y, 20, 20, 'steelblue')
+        rectangle.fact = facts[0]
         rectangle.drawOn = () => {}
         rectangle.drawOverOn = (context) => {
-          console.log(`drawing label`)
           context.fillStyle = 'lightyellow'
           context.fillText($c, $x, $y - 10)
         }
@@ -155,7 +155,7 @@ document.body.addEventListener('mousemove', e => {
       const newFact = facts[0].slice();
       newFact[5] = mouse.x;
       newFact[7] = mouse.y;
-      assert(newFact);  // TODO: don't want provenance here!
+      assert(newFact);  // TODO: don't want provenance!
     });
 
   console.log('-----');
