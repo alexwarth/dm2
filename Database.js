@@ -12,20 +12,31 @@ class Database {
     return Array.from(this.factsMap.values());
   }
 
+  assert(...facts) {
+    for (let fact of facts) {
+      this.factsMap.set(JSON.stringify(fact), fact);
+    }
+  }
+
+  retract(...facts) {
+    for (let fact of facts) {
+      this.factsMap.delete(JSON.stringify(fact));
+    }
+  }
+
   toString() {
     return this.facts.map(fact => JSON.stringify(fact)).join('\n');
   }
 
   match(fact, queryFact, origState) {
-    if (fact.length !== queryFact.length ||
-        fact[0] !== queryFact[0]) {
+    if (fact.length !== queryFact.length) {
       return null;
     }
     let state = {
       vars: Object.create(origState.vars),
       facts: origState.facts.slice()
     };
-    for (let idx = 1; idx < fact.length; idx++) {
+    for (let idx = 0; idx < fact.length; idx++) {
       const f = fact[idx];
       const q = queryFact[idx];
       if (typeof q === 'string' && q[0] === '$') {
