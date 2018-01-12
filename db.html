@@ -35,7 +35,30 @@ class Orchestrator extends Rectangle {
         this.processes[this.processes.length - 1];
     const process = new Rectangle(20, lastObj.y + 40, 30, 30, color);
     process.name = name;
-    process.step = fn;
+    process.drawOn = function(ctxt, options) {
+      ctxt.font = '12pt optima';
+      this.width = ctxt.measureText(this.name).width + 8;
+      this.x = this.width / 2 + 5;
+      Rectangle.prototype.drawOn.call(this, ctxt, options);
+      ctxt.fillStyle = 'yellow';
+      ctxt.fillText(this.name, this.x - this.width / 2 + 4, this.y + 6);
+      if (this.disabled) {
+        ctxt.lineWidth = 2;
+        ctxt.strokeStyle = 'red';
+        ctxt.beginPath();
+        ctxt.moveTo(this.leftX, this.topY);
+        ctxt.lineTo(this.rightX, this.bottomY);
+        ctxt.moveTo(this.rightX, this.topY);
+        ctxt.lineTo(this.leftX, this.bottomY);
+        ctxt.stroke();
+        ctxt.lineWidth = 1;
+      }
+    };
+    process.step = t => {
+      if (!process.disabled) {
+        fn(t);
+      }
+    };
     this.processes.push(process);
   }
 }
@@ -82,7 +105,7 @@ orchestrator.addProcess(
 
 orchestrator.addProcess(
   'object labeler',
-  'lightyellow',
+  'maroon',
   () => {
     db.query(
       [
@@ -119,6 +142,12 @@ document.body.addEventListener('mousedown', e => {
   db.retract(mouseButtonFact);
   mouseButtonFact = ['mouse', 'button', 'is', 'down'];
   db.assert(mouseButtonFact);
+
+  for (let process of orchestrator.processes) {
+    if (process.containsPoint(mouse.x, mouse.y)) {
+      process.disabled = !!!process.disabled;
+    }
+  }
 
   if (e.altKey) {
     const obj = makeNewId();
