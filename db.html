@@ -116,7 +116,13 @@ function randomColor() {
   return colors[Math.floor(Math.random() * Math.floor(colors.length))];
 }
 
+let mouseButtonFact = null;
+
 document.body.addEventListener('mousedown', e => {
+  db.retract(mouseButtonFact);
+  mouseButtonFact = ['mouse', 'button', 'is', 'down'];
+  db.assert(mouseButtonFact);
+
   if (e.altKey) {
     const obj = makeNewId();
     const facts = [
@@ -125,8 +131,6 @@ document.body.addEventListener('mousedown', e => {
       [obj, '\'s', 'color', 'is', randomColor()]
     ];
     db.assert(...facts);
-    console.log('---');
-    console.log(db.toString());
   } else if (e.metaKey) {
     const obj = makeNewId();
     const facts = [
@@ -136,34 +140,43 @@ document.body.addEventListener('mousedown', e => {
       [obj, '\'s', 'color', 'is', randomColor()]
     ];
     db.assert(...facts);
-    console.log('---');
-    console.log(db.toString());
   } else {
     targetObjId = mouse.targetObj && mouse.targetObj.fact && mouse.targetObj.fact[0];
   }
+  console.log('-----');
+  console.log(db.toString());
 });
 
-document.body.addEventListener('mousemove', e => {
-  if (!targetObjId) {
-    return;
-  }
+let mousePosFact = null;
 
-  db.query(
-    [[targetObjId, 'is a', '$t', 'at', '(', '$x', ',', '$y', ')']],
-    ({targetObjId, $t, $x, $y}, facts, assert, retract) => {
-      retract(facts[0]);
-      const newFact = facts[0].slice();
-      newFact[5] = mouse.x;
-      newFact[7] = mouse.y;
-      assert(newFact);  // TODO: don't want provenance!
-    });
+document.body.addEventListener('mousemove', e => {
+  db.retract(mousePosFact);
+  mousePosFact = ['mouse', 'is', 'at', '(', mouse.x, ',', mouse.y, ')'];
+  db.assert(mousePosFact);
+
+  if (targetObjId) {
+    db.query(
+      [[targetObjId, 'is a', '$t', 'at', '(', '$x', ',', '$y', ')']],
+      ({targetObjId, $t, $x, $y}, facts, assert, retract) => {
+        retract(facts[0]);
+        const newFact = facts[0].slice();
+        newFact[5] = mouse.x;
+        newFact[7] = mouse.y;
+        assert(newFact);  // TODO: don't want provenance here!
+      });
+  }
 
   console.log('-----');
   console.log(db.toString());
 });
 
 document.body.addEventListener('mouseup', e => {
+  db.retract(mouseButtonFact);
+  mouseButtonFact = ['mouse', 'button', 'is', 'up'];
+  db.assert(mouseButtonFact);
   targetObjId = null;
+  console.log('-----');
+  console.log(db.toString());
 });
 
     </script>
