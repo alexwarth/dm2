@@ -64,8 +64,6 @@ class Orchestrator extends Rectangle {
   }
 }
 
-
-
 const orchestrator = new Orchestrator();
 objects.push(orchestrator);
 
@@ -139,6 +137,33 @@ orchestrator.addProcess(
         const newFact = facts[0].slice();
         newFact[7] += globalVy;
         assert(newFact);
+      });
+  },
+  true);
+
+function dist(ax, ay, bx, by) {
+  return Math.pow(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2), 0.5);
+}
+
+orchestrator.addProcess(
+  'fear of mice',
+  'red',
+  () => {
+    db.query(
+      [['mouse', 'is', 'at', '(', '$mx', ',', '$my', ')'],
+        ['$obj', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')']],
+      ({$mx, $my, $obj, $x, $y}, facts, assert, retract) => {
+        const d = dist($mx, $my, $x, $y);
+        if (d < 100) {
+          retract(facts[1]);
+          const newFact = facts[1].slice();
+          const v = 2;
+          const dx = v * ($mx > $x ? -1 : 1);
+          const dy = v * ($my > $y ? -1 : 1);
+          newFact[5] += dx;
+          newFact[7] += dy;
+          assert(newFact);
+        }
       });
   },
   true);
