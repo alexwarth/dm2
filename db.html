@@ -53,8 +53,8 @@ orchestrator.addProcess(
         ['$c', '\'s', 'radius', 'is', '$r'],
         ['$c', '\'s', 'color', 'is', '$color'],
       ],
-      (vars, facts, assert, retract) => {
-        const c = new Circle(vars.$x, vars.$y, vars.$r, vars.$color);
+      ({$x, $y, $r, $color}, facts, assert, retract) => {
+        const c = new Circle($x, $y, $r, $color);
         c.fact = facts[0];
         objects.push(c);
       }
@@ -89,10 +89,10 @@ orchestrator.addProcess(
         ['$c', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')'],
       ],
       ({$c, $x, $y, $h}, facts, assert, retract) => {
-        const rectangle = new Rectangle($x, $y, 20, 20, 'steelblue')
+        const rectangle = new Rectangle($x, $y, 0, 0, 'black')
         rectangle.fact = facts[0]
         rectangle.drawOn = () => {}
-        rectangle.drawOverOn = (context) => {
+        rectangle.drawOverOn = context => {
           context.fillStyle = 'lightyellow'
           context.fillText($c, $x, $y - 10)
         }
