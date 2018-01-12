@@ -67,6 +67,13 @@ class Orchestrator extends Rectangle {
 const orchestrator = new Orchestrator();
 objects.push(orchestrator);
 
+function illuminate(fn) {
+  const r = new Rectangle(0, 0, 0, 0, 'black');
+  r.drawOn = () => {};
+  r.drawOverOn = fn;
+  objects.push(r);
+}
+
 orchestrator.addProcess(
   'circle illuminator',
   'steelblue',
@@ -217,6 +224,25 @@ orchestrator.addProcess(
       });
   },
   true);
+
+orchestrator.addProcess(
+  'halos',
+  '#abc',
+  () => {
+    db.query(
+      [['$thing', 'is a', 'circle', 'at', '(', '$x', ',', '$y', ')'],
+       ['$thing', '\'s', 'radius', 'is', '$r']],
+      ({$x, $y, $r}, facts, assert, retract) => {
+        illuminate(ctxt => {
+          ctxt.beginPath();
+          ctxt.strokeStyle = 'yellow';
+          ctxt.lineWidth = 10;
+          ctxt.arc($x, $y, $r + 20, 0, Math.PI * 2);
+          ctxt.stroke();
+          ctxt.linewidth = 1;
+        });
+      });
+  })
 
 let targetObjId = null;
 
