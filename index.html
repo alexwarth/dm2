@@ -16,22 +16,59 @@ Obj.prototype.infect = async function(direction) {
   }
 };
 
-function makeJuicedUpRectangle(x, y, w, h, c) {
-  const r = new Rectangle(x, y, w, h, c);
-  r.origWidth = w;
-  r.origHeight = h;
-  r.step = function(t) {
+document.body.addEventListener('keydown', e => {
+  if (!mouse.targetObj) {
+    return;
+  }
+  const descriptor = new ReceiverDescriptor(mouse.targetObj);
+  const maxDistance = e.shiftKey ? undefined : 100;
+  switch (e.code) {
+    case 'KeyW':
+      descriptor.up(maxDistance);
+      break;
+    case 'KeyX':
+      descriptor.down(maxDistance);
+      break;
+    case 'KeyA':
+      descriptor.left(maxDistance);
+      break;
+    case 'KeyD':
+      descriptor.right(maxDistance);
+      break;
+    case 'KeyS':
+      descriptor.nearby(maxDistance);
+      break;
+    default:
+      return;
+  }
+  const selector = 'infect';
+  const args = [descriptor.direction];
+  scheduledSends.push({descriptor, selector, args});
+});
+
+Circle.prototype.juiceUp = function() {
+  this.origRadius = this.radius;
+  this.step = function(t) {
+    this.radius = this.origRadius + 0.1 * this.origRadius * Math.sin(t / 60 / (2 * Math.PI));
+  };
+  return this;
+};
+
+Rectangle.prototype.juiceUp = function() {
+  this.origWidth = this.width;
+  this.origHeight = this.height;
+  this.step = function(t) {
     this.width = this.origWidth + 0.1 * this.origWidth * Math.sin(t / 60 / (2 * Math.PI));
     this.height = this.origHeight + 0.1 * this.origHeight * Math.cos(t / 60 / (2 * Math.PI));
   };
-  return r;
-}
+  return this;
+};
 
 objects = [
-  new Circle(100, 100, 25, 'blue'),
-  new Circle(100, 200, 30, 'green'),
-  new Rectangle(200, 100, 80, 40, 'cornflowerblue'),
-  makeJuicedUpRectangle(200, 200, 100, 35, 'orange')
+  new Circle(100, 100, 25, 'blue').juiceUp(),
+  new Circle(100, 200, 30, 'green').juiceUp(),
+  new Rectangle(200, 100, 80, 40, 'cornflowerblue').juiceUp(),
+  new Rectangle(200, 200, 100, 35, 'orange').juiceUp()
 ];
 
     </script>

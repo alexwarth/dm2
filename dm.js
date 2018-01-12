@@ -425,7 +425,7 @@ class ReceiverDescriptor {
       case 'nearby': {
         const maxDistance = Math.min(
             this.maxDistance,
-            Math.max(canvas.width, canvas.height));
+            2 * Math.max(canvas.width, canvas.height));
         beam = new Circle(this.sender.x, this.sender.y, maxDistance, 'yellow');
         break;
       }
@@ -506,46 +506,23 @@ document.body.addEventListener('mouseup', e => {
 document.body.addEventListener('keydown', e => {
   if (e.code === 'Space') {
     debug = !debug;
-    return;
   }
-  if (!mouse.targetObj) {
-    return;
-  }
-  const descriptor = new ReceiverDescriptor(mouse.targetObj);
-  const maxDistance = e.shiftKey ? undefined : 100;
-  switch (e.code) {
-    case 'KeyW':
-      descriptor.up(maxDistance);
-      break;
-    case 'KeyX':
-      descriptor.down(maxDistance);
-      break;
-    case 'KeyA':
-      descriptor.left(maxDistance);
-      break;
-    case 'KeyD':
-      descriptor.right(maxDistance);
-      break;
-    case 'KeyS':
-      descriptor.nearby(maxDistance);
-      break;
-    default:
-      return;
-  }
-  const selector = 'infect';
-  const args = [descriptor.direction];
-  scheduledSends.push({descriptor, selector, args});
 });
 
-let objects;
+let objects = [];
 const beams = [];
 let scheduledSends = [];
 let t = 0;
 
-async function main(t) {
+function fixCanvasSize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+}
 
+fixCanvasSize();
+
+async function main(t) {
+  fixCanvasSize();
   for (let obj of objects) {
     await obj.step(t);
   }
