@@ -1,24 +1,93 @@
 <html>
-  <body>
+  <body style="margin: 0; background: black;">
+    <div style="text-align: center;">
+      <canvas id="canvas"></canvas>
+    </div>
+    <script src="dm.js"></script>
     <script src="Database.js"></script>
     <script>
 
 'use strict';
 
 const db = new Database(
-  ['father', 'homer', 'bart'],
-  ['father', 'homer', 'lisa'],
-  ['father', 'abe', 'homer'],
-  ['pet', 'santasLittleHelper', 'bart']);
+  ['C1', 'is a', 'circle', 'at', '(', 300, ',', 300, ')'],
+  ['C1', '\'s', 'color', 'is', 'cornflowerblue'],
+  ['C1', '\'s', 'radius', 'is', 50]
+);
 
-db.query(
-  [['father', '$x', '$y'], ['father', '$y', '$z']],
-  (vars, facts, assert, retract) => {
-    console.log('found out that', vars.$x, 'is', vars.$z, '\'s grandfather!');
-    assert(['grandfather', vars.$x, vars.$z]);
-  });
+class Orchestrator extends Rectangle {
+  constructor() {
+    super(20, 20, 30, 30, 'indigo');
+  }
 
-console.log(db.toString());
+  async step(t) {
+    objects = [this];
+    db.query(
+      [
+        ['$c', 'is a', 'circle', 'at', '(', '$x', ',', '$y', ')'],
+        ['$c', '\'s', 'radius', 'is', '$r'],
+        ['$c', '\'s', 'color', 'is', '$color'],
+      ],
+      (vars, facts, assert, retract) => {
+        const c = new Circle(vars.$x, vars.$y, vars.$r, vars.$color);
+        c.fact = facts[0];
+        objects.push(c);
+      }
+    );
+  }
+}
+
+const orchestrator = new Orchestrator();
+objects.push(orchestrator);
+
+let targetObjFact = null;
+
+let nextIdNum = 1;
+function makeNewId() {
+  return 'obj#' + nextIdNum++;
+}
+
+const colors = ['cornflowerblue', 'steelblue', 'maroon', 'yellow', '#ccc'];
+function randomColor() {
+  return colors[Math.floor(Math.random() * Math.floor(colors.length))];
+}
+
+document.body.addEventListener('mousedown', e => {
+  if (e.altKey) {
+    const obj = makeNewId();
+    const facts = [
+      [obj, 'is a', 'circle', 'at', '(', mouse.x, ',', mouse.y, ')'],
+      [obj, '\'s', 'radius', 'is', 50 + (Math.random() - .5) * 20],
+      [obj, '\'s', 'color', 'is', randomColor()]
+    ];
+    db.assert(...facts);
+    console.log('---');
+    console.log(db.toString());
+  } else if (e.metaKey) {
+    // TODO(jonathan): make a square!
+  } else {
+    targetObjFact = mouse.targetObj && mouse.targetObj.fact;
+  }
+});
+
+document.body.addEventListener('mousemove', e => {
+  if (!targetObjFact) {
+    return;
+  }
+  // Could just modify fact in place, but that's an optimization
+  // and optimizations are evil.
+  db.retract(targetObjFact);
+  targetObjFact = targetObjFact.slice();
+  targetObjFact[5] = mouse.x;
+  targetObjFact[7] = mouse.y;
+  db.assert(targetObjFact);
+  console.log('-----');
+  console.log(db.toString());
+});
+
+document.body.addEventListener('mouseup', e => {
+  targetObjFact = null;
+});
 
     </script>
   </body>
