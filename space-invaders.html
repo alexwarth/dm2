@@ -1,0 +1,94 @@
+<html>
+  <body style="margin: 0; background: black;">
+    <div style="text-align: center;">
+      <canvas id="canvas"></canvas>
+    </div>
+    <script src="dm.js"></script>
+    <script>
+
+'use strict';
+
+debug = false;
+
+class Alien extends Rectangle {
+  constructor(x, y) {
+    super(x, y, 50, 50, '#efefef');
+    this.origWidth = this.width;
+    this.origHeight = this.height;
+    this.vx = 1;
+  }
+
+  async step(t) {
+    this.width = this.origWidth + 0.05 * this.origWidth * Math.sin(t / 60 / (2 * Math.PI));
+    this.height = this.origHeight + 0.05 * this.origHeight * Math.cos(t / 60 / (2 * Math.PI));
+    this.x += this.vx;
+    if (this.vx < 0 && this.leftX < 0 ||
+        this.vx > 0 && this.rightX >= canvas.width) {
+      await this.turnAround();
+      await this.to.all(Alien).nearby().send('turnAround');
+    }
+    const responses = await this.to.all(Bullet).down(this.height / 2 + 2).send('ping');
+    const bullets = responses.map(response => response.receiver);
+    for (let bullet of bullets) {
+      bullet.destroy();
+    }
+    if (bullets.length > 0) {
+      this.destroy();
+    }
+  }
+
+  async turnAround() {
+    this.vx = -this.vx;
+  }
+}
+
+class Bullet extends Rectangle {
+  constructor(x, y) {
+    super(x, y, 5, 10, 'yellow');
+    this.vy = -4;
+  }
+
+  async step(t) {
+    this.y += this.vy;
+    if (this.bottomY < 0) {
+      this.destroy();
+    }
+  }
+}
+
+class Spaceship extends Rectangle {
+  constructor() {
+    super(canvas.width / 2, canvas.height - 55, 20, 50, 'cornflowerblue');
+  }
+
+  async step(t) {
+    this.y = canvas.height - this.height;
+  }
+
+  fireBullet() {
+    const b = new Bullet(this.x, this.y - this.height / 2);
+    objects.push(b);
+  }
+}
+
+for (let row = 0; row < 3; row++) {
+  const xOffset = 50 + (row % 2 === 0 ? 0 : 50);
+  const y = row * 100 + 50;
+  for (let x = xOffset; x + 50 < canvas.width; x += 100) {
+    objects.push(new Alien(x, y));
+  }
+}
+
+objects.push(new Spaceship());
+
+document.body.addEventListener('keydown', e => {
+  if (e.key === 'Shift') {
+    objects.
+        filter(obj => obj instanceof Spaceship).
+        forEach(spaceship => spaceship.fireBullet());
+  }
+});
+
+    </script>
+  </body>
+</html>
