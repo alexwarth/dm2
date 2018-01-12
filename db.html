@@ -184,15 +184,19 @@ orchestrator.addProcess(
       navigator.mediaDevices.getUserMedia({video: true}).then(mediaStream => {
         webcamTrack = mediaStream.getVideoTracks()[0];
       });
-    } else {
+    } else if (readyForNextFrame) {
+      readyForNextFrame = false;
       const imageCapture = new ImageCapture(webcamTrack);
       imageCapture.grabFrame().then(x => {
         db.retract(webcamFrameFact);
         webcamFrameFact = ['image', 'from', 'webcam', 'is', x];
         db.assert(webcamFrameFact);
         readyForNextFrame = true;
+        console.log('-----');
+        console.log(db.toString());
+      }).catch(e => {
+        readyForNextFrame = true;
       });
-      readyForNextFrame = false;
     }
   },
   true);
@@ -211,7 +215,8 @@ orchestrator.addProcess(
         r.facts = facts[0];
         objects.push(r);
       });
-  });
+  },
+  true);
 
 let targetObjId = null;
 
