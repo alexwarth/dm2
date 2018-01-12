@@ -3,7 +3,11 @@
 let debug = true;
 
 class Obj {
-  constructor(x, y, color) {
+  info() {
+    return [this.x, this.y, this.color];
+  }
+
+  constructor(x, y, color, code) {
     this.x = x;
     this.y = y;
     this.color = color;
