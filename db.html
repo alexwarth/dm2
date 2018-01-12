@@ -116,7 +116,7 @@ orchestrator.addProcess(
         rectangle.drawOn = () => {}
         rectangle.drawOverOn = context => {
           context.fillStyle = 'lightyellow'
-          context.fillText($c, $x, $y - 10)
+          context.fillText($c, $x - ctxt.measureText($c).width / 2, $y - 6)
         }
         objects.push(rectangle)
       }
@@ -167,6 +167,51 @@ orchestrator.addProcess(
       });
   },
   true);
+
+let webcamInitStarted = false;
+let webcamTrack = null;
+let webcamFrameFact = null;
+let readyForNextFrame = true;
+orchestrator.addProcess(
+  'webcam',
+  'blue',
+  () => {
+    if (!webcamTrack) {
+      if (webcamInitStarted) {
+        return;
+      }
+      webcamInitStarted = true;
+      navigator.mediaDevices.getUserMedia({video: true}).then(mediaStream => {
+        webcamTrack = mediaStream.getVideoTracks()[0];
+      });
+    } else {
+      const imageCapture = new ImageCapture(webcamTrack);
+      imageCapture.grabFrame().then(x => {
+        db.retract(webcamFrameFact);
+        webcamFrameFact = ['image', 'from', 'webcam', 'is', x];
+        db.assert(webcamFrameFact);
+        readyForNextFrame = true;
+      });
+      readyForNextFrame = false;
+    }
+  },
+  true);
+
+orchestrator.addProcess(
+  'video display',
+  'violet',
+  () => {
+    db.query(
+      [['image', 'from', 'webcam', 'is', '$bitmap']],
+      ({$bitmap}, facts, assert, retract) => {
+        const r = new Rectangle(canvas.width - 160, 120, 320, 240, 'green');
+        r.drawOn = function(ctxt) {
+          ctxt.drawImage($bitmap, r.leftX, r.topY, r.width, r.height);
+        };
+        r.facts = facts[0];
+        objects.push(r);
+      });
+  });
 
 let targetObjId = null;
 
