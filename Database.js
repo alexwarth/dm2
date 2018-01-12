@@ -4,7 +4,7 @@ class Database {
   constructor(...facts) {
     this.factsMap = new Map();
     for (let fact of facts) {
-      this.factsMap.set(JSON.stringify(fact), fact);
+      this.assert(fact);
     }
   }
 
@@ -14,6 +14,7 @@ class Database {
 
   assert(...facts) {
     for (let fact of facts) {
+      fact.provenance = [];
       this.factsMap.set(JSON.stringify(fact), fact);
     }
   }
@@ -71,7 +72,14 @@ class Database {
 
   iQuery(conjuncts, fn, facts, state, assert, retract) {
     if (conjuncts.length === 0) {
-      fn(state.vars, state.facts, assert, retract);
+      fn(
+        state.vars,
+        state.facts,
+        fact => {
+          fact.provenance = facts;
+          assert(fact);
+        },
+        retract);
       return;
     }
     for (let fact of facts) {
