@@ -58,6 +58,10 @@ class Obj {
     throw new Error('subclass responsibility');
   }
 
+  drawOverOn(ctxt, options) {
+    // no-op
+  }
+
   setStrokeStyle(ctxt, options) {
     if (!options) {
       return false;
@@ -129,6 +133,14 @@ class Obj {
           isCurrentReceiver: obj === receiver
         }
         obj.drawOn(ctxt, options);
+      }
+      for (let obj of objects) {
+        const options = {
+          isSender: obj === beam.sender,
+          isReceiver: receivers.includes(obj),
+          isCurrentReceiver: obj === receiver
+        }
+        obj.drawOverOn(ctxt, options);
       }
 
       ctxt.font = '12pt Avenir';
