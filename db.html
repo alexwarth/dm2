@@ -1,0 +1,25 @@
+<html>
+  <body>
+    <script src="Database.js"></script>
+    <script>
+
+'use strict';
+
+const db = new Database(
+  ['father', 'homer', 'bart'],
+  ['father', 'homer', 'lisa'],
+  ['father', 'abe', 'homer'],
+  ['pet', 'santasLittleHelper', 'bart']);
+
+db.query(
+  [['father', '$x', '$y'], ['father', '$y', '$z']],
+  (vars, facts, assert, retract) => {
+    console.log('found out that', vars.$x, 'is', vars.$z, '\'s grandfather!');
+    assert(['grandfather', vars.$x, vars.$z]);
+  });
+
+console.log(db.toString());
+
+    </script>
+  </body>
+</html>
