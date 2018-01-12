@@ -13,7 +13,7 @@ const db = new Database(
   ['C1', 'is a', 'circle', 'at', '(', 300, ',', 300, ')'],
   ['C1', '\'s', 'color', 'is', 'cornflowerblue'],
   ['C1', '\'s', 'radius', 'is', 50],
-  ['R1', 'is a', 'rectangle', 'at', '(', 150, ',', 150, ')'],
+  ['R1', 'is a', 'rectangle', 'at', '(', 450, ',', 150, ')'],
   ['R1', '\'s', 'width', 'is', 50],
   ['R1', '\'s', 'height', 'is', 100],
   ['R1', '\'s', 'color', 'is', 'salmon'],
@@ -29,7 +29,7 @@ class Orchestrator extends Rectangle {
     objects = [this, ...this.processes];
   }
 
-  addProcess(name, color, fn) {
+  addProcess(name, color, fn, optDisabled) {
     const lastObj = this.processes.length === 0 ?
         this :
         this.processes[this.processes.length - 1];
@@ -59,9 +59,12 @@ class Orchestrator extends Rectangle {
         fn(t);
       }
     };
+    process.disabled = !!optDisabled;
     this.processes.push(process);
   }
 }
+
+
 
 const orchestrator = new Orchestrator();
 objects.push(orchestrator);
@@ -108,10 +111,8 @@ orchestrator.addProcess(
   'maroon',
   () => {
     db.query(
-      [
-        ['$c', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')'],
-      ],
-      ({$c, $x, $y, $h}, facts, assert, retract) => {
+      [['$c', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')']],
+      ({$c, $x, $y}, facts, assert, retract) => {
         const rectangle = new Rectangle($x, $y, 0, 0, 'black')
         rectangle.fact = facts[0]
         rectangle.drawOn = () => {}
@@ -122,7 +123,25 @@ orchestrator.addProcess(
         objects.push(rectangle)
       }
     )
-  });
+  },
+  true);
+
+let globalVy = 0;
+orchestrator.addProcess(
+  'gravity',
+  'midnightblue',
+  () => {
+    globalVy += 1;
+    db.query(
+      [['$obj', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')']],
+      ({$obj, $x, $y}, facts, assert, retract) => {
+        retract(facts[0]);
+        const newFact = facts[0].slice();
+        newFact[7] += globalVy;
+        assert(newFact);
+      });
+  },
+  true);
 
 let targetObjId = null;
 
