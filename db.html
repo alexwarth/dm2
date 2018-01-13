@@ -149,24 +149,105 @@ function dist(ax, ay, bx, by) {
 }
 
 orchestrator.addProcess(
-  'fear of mice',
+  'draw sightlines',
   'red',
   () => {
     db.query(
-      [['mouse', 'is', 'at', '(', '$mx', ',', '$my', ')'],
-        ['$obj', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')']],
-      ({$mx, $my, $obj, $x, $y}, facts, assert, retract) => {
-        const d = dist($mx, $my, $x, $y);
-        if (d < 100) {
-          retract(facts[1]);
-          const newFact = facts[1].slice();
-          const v = 2;
-          const dx = v * ($mx > $x ? -1 : 1);
-          const dy = v * ($my > $y ? -1 : 1);
-          newFact[5] += dx;
-          newFact[7] += dy;
-          assert(newFact);
+      [['$obj', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')'],
+       ['$obj2', 'is a', '$t2', 'at', '(', '$x2', ',', '$y2', ')'],
+       ['$obj', 'can see', '$obj2']
+      ],
+      ({$obj, $obj2, $x, $y, $x2, $y2}, facts, assert, retract) => {
+        illuminate(ctxt => {
+          ctxt.beginPath();
+          ctxt.strokeStyle = 'yellow';
+          ctxt.lineWidth = 10;
+          ctxt.moveTo($x, $y);
+          ctxt.lineTo($x2,$y2);
+          ctxt.stroke();
+          ctxt.linewidth = 1;
+        })
+      }
+    )
+  });
+
+orchestrator.addProcess(
+  'seeing',
+  'lightgreen',
+  () => {
+    db.query([
+       ['$obj1', 'is a', '$t1', 'at', '(', '$x1', ',', '$y1', ')'],
+       ['$obj2', 'is a', '$t2', 'at', '(', '$x2', ',', '$y2', ')'],
+      ],
+      ({$obj1, $obj2, $x1, $y1, $x2, $y2}, facts, assert, retract) => {
+        const d = dist($x1, $y1, $x2, $y2);
+        if (d < 300) {
+          assert([$obj1, 'can see', $obj2]);
+          assert([$obj2, 'can see', $obj1]);
+        } else {
+          retract([$obj1, 'can see', $obj2]);
+          retract([$obj2, 'can see', $obj1]);
         }
+      }
+    )
+  })
+
+orchestrator.addProcess(
+  'is near a mouse',
+  'orange',
+  () => {
+    db.query([
+      ['$obj', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')'],
+      ['mouse', 'is', 'at', '(', '$mx', ',', '$my', ')'],
+    ],
+    ({$obj, $mx, $my, $x, $y}, facts, assert, retract) => {
+      const d = dist($mx, $my, $x, $y);
+      if (d < 100) {
+        assert([$obj, 'is near a mouse'])
+      } else {
+        retract([$obj, 'is near a mouse'])
+      }
+    })
+  }
+)
+
+orchestrator.addProcess(
+  'learning to not be afraid',
+  'blue',
+  () => {
+    db.query([
+        ['$obj', 'is afraid of mice'],
+        ['$obj', 'can see', '$obj2'],
+        ['$obj2', 'is not afraid of mice'],
+        ['$obj2', 'is near a mouse'],
+      ],
+      ({$obj}, facts, assert, retract) => {
+        retract([$obj, 'is afraid of mice']);
+        assert([$obj, 'is not afraid of mice']);
+      }
+    )
+  },
+  true);
+
+orchestrator.addProcess(
+  'fear of mice',
+  'red',
+  () => {
+    db.query([
+        ['$obj', 'is near a mouse'],
+        ['$obj', 'is a', '$t', 'at', '(', '$x', ',', '$y', ')'],
+        ['$obj', 'is afraid of mice'],
+        ['mouse', 'is', 'at', '(', '$mx', ',', '$my', ')'],
+      ],
+      ({$mx, $my, $obj, $x, $y}, facts, assert, retract) => {
+        retract(facts[1]);
+        const newFact = facts[1].slice();
+        const v = 2;
+        const dx = v * ($mx > $x ? -1 : 1);
+        const dy = v * ($my > $y ? -1 : 1);
+        newFact[5] += dx;
+        newFact[7] += dy;
+        assert(newFact);
       });
   },
   true);
@@ -272,6 +353,11 @@ document.body.addEventListener('mousedown', e => {
       [obj, '\'s', 'radius', 'is', 50 + (Math.random() - .5) * 20],
       [obj, '\'s', 'color', 'is', randomColor()]
     ];
+    if (Math.random() < 0.5) {
+      facts.push([obj, 'is afraid of mice'])
+    } else {
+      facts.push([obj, 'is not afraid of mice'])
+    }
     db.assert(...facts);
   } else if (e.metaKey) {
     const obj = makeNewId();
@@ -281,6 +367,11 @@ document.body.addEventListener('mousedown', e => {
       [obj, '\'s', 'height', 'is', 50 + (Math.random() - .5) * 20],
       [obj, '\'s', 'color', 'is', randomColor()]
     ];
+    if (Math.random() < 0.5) {
+      facts.push([obj, 'is afraid of mice'])
+    } else {
+      facts.push([obj, 'is not afraid of mice'])
+    }
     db.assert(...facts);
   } else {
     targetObjId = mouse.targetObj && mouse.targetObj.fact && mouse.targetObj.fact[0];
@@ -322,12 +413,18 @@ document.body.addEventListener('mouseup', e => {
 });
 
 const host = window.document.location.host.replace(/:.*/, '')
-let ws = new WebSocket('ws://' + host + ':8080')
-ws.onmessage = (event) => {
-  const assertion = JSON.parse(event.data)
-  if (typeof assertion == 'Array') {
-    db.assert(assertion)
-  }
+let ws = new WebSocket('ws://' + host + ':3000')
+
+ws.onconnect = (event, somethingelse) => {
+  ws.send('it me')
+}
+
+ws.onmessage = event => {
+  console.log(event)
+//  const assertion = JSON.parse(event.data)
+//  if (typeof assertion == 'Array') {
+ //   db.assert(assertion)
+  //}
 }
 
     </script>
