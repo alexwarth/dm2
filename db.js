@@ -130,7 +130,7 @@ orchestrator.addProcess(
         retract(facts[0])
         const newFact = facts[0].slice()
         newFact[7] += globalVy
-        assert(newFact)
+        assert(newFact).withoutEvidence()
       })
   },
   true)
@@ -386,7 +386,7 @@ document.body.addEventListener('mousemove', e => {
         const newFact = facts[0].slice()
         newFact[5] = mouse.x
         newFact[7] = mouse.y
-        assert(newFact)  // TODO: don't want provenance here!
+        assert(newFact).withoutEvidence()
       })
   }
 
