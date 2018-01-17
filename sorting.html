@@ -1,0 +1,107 @@
+<html>
+  <body style="margin: 0; background: black;">
+    <div style="text-align: center;">
+      <canvas id="canvas"></canvas>
+    </div>
+    <script src="dm.js"></script>
+    <script>
+
+'use strict';
+
+debug = false;
+
+class Status extends Rectangle {
+  constructor(x, y) {
+    super(0, 0, 0, 0, 'black');
+    this.msg = '???';
+  }
+
+  drawOn(ctxt) {
+    ctxt.font = '25pt Comic Sans MS';
+    ctxt.fillStyle = this.color;
+    const x = canvas.width / 2 - ctxt.measureText(this.msg).width / 2;
+    const y = 100;
+    ctxt.fillText(this.msg, x, y);
+  }
+
+  async step(t) {
+    const responses = await this.to.nearby().send('ping');
+    if (responses.every(({receiver, result}) => receiver.color === 'cornflowerblue')) {
+      this.msg = 'Yay, you did it!';
+      this.color = 'white';
+    } else {
+      this.msg = 'Please sort the rectangles.';
+      this.color = 'yellow';
+    }
+  }
+}
+
+class SentientRectangle extends Rectangle {
+  constructor(x, y, w, h) {
+    super(x, y, w, h, 'black');
+    this.state = 'sad';
+  }
+
+  async step(t) {
+    const responses = await this.to.right().send('ping');
+    if (responses.every(({receiver, result}) => this.height < receiver.height)) {
+      this.color = 'cornflowerblue';
+      this.faceColor = 'black';
+      this.state = 'happy';
+    } else {
+      this.color = 'maroon';
+      this.faceColor = 'white';
+      this.state = 'sad';
+    }
+  }
+
+  drawOn(ctxt, options) {
+    super.drawOn(ctxt, options);
+    ctxt.fillStyle = ctxt.strokeStyle = this.faceColor;
+
+    ctxt.beginPath();
+    ctxt.arc(this.x - this.width / 4, this.y - 10, 3, 0, 2 * Math.PI);
+    ctxt.fill();
+
+    ctxt.beginPath();
+    ctxt.arc(this.x + this.width / 4, this.y - 10, 3, 0, 2 * Math.PI);
+    ctxt.fill();
+
+    ctxt.lineWidth = 2;
+    ctxt.beginPath();
+    ctxt.arc(
+        this.x,
+        this.state === 'happy' ? this.y + 20 - this.width / 3 : this.y + 20,
+        this.width / 3,
+        this.state === 'happy' ? 0 : Math.PI,
+        this.state === 'happy' ? Math.PI : 0);
+    ctxt.stroke();
+    ctxt.lineWidth = 1;
+  }
+}
+Rectangle.prototype.step = async function(t) {
+};
+
+
+document.body.addEventListener('keydown', async e => {
+  if (!mouse.targetObj) {
+    return;
+  }
+  console.log(JSON.stringify(await mouse.targetObj.to.right().upTo(1).send('countSorted')));
+});
+
+const centerX = canvas.width / 2;
+
+objects = [
+  new Status(),
+  new SentientRectangle(centerX + 250, 300, 50, 50),
+  new SentientRectangle(centerX + 150, 300, 50, 75),
+  new SentientRectangle(centerX + 50, 300, 50, 100),
+  new SentientRectangle(centerX - 50, 300, 50, 125),
+  new SentientRectangle(centerX - 150, 300, 50, 150),
+  new SentientRectangle(centerX - 250, 300, 50, 175),
+];
+
+    </script>
+  </body>
+</html>
