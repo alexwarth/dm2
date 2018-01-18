@@ -244,10 +244,6 @@ orchestrator.addProcess(
   },
   true)
 
-/*
-
-
-
 let webcamInitStarted = false
 let webcamTrack = null
 let webcamFrameFact = null
@@ -255,7 +251,7 @@ let readyForNextFrame = true
 orchestrator.addProcess(
   'webcam',
   'blue',
-  () => {
+  client => {
     if (!webcamTrack) {
       if (webcamInitStarted) {
         return
@@ -268,9 +264,8 @@ orchestrator.addProcess(
       readyForNextFrame = false
       const imageCapture = new ImageCapture(webcamTrack)
       imageCapture.grabFrame().then(x => {
-        db.retract(webcamFrameFact)
-        webcamFrameFact = ['image', 'from', 'webcam', 'is', x]
-        db.assert(webcamFrameFact)
+        client.retract('image from webcam is $bitmap')
+        client.assert('image from webcam is _', x)
         readyForNextFrame = true
         console.log('-----')
         console.log(db.toString())
@@ -284,21 +279,16 @@ orchestrator.addProcess(
 orchestrator.addProcess(
   'video display',
   'violet',
-  () => {
-    db.query(
-      [['image', 'from', 'webcam', 'is', '$bitmap']],
-      ({$bitmap}, facts, assert, retract) => {
-        const r = new Rectangle(canvas.width - 160, 120, 320, 240, 'green')
-        r.drawOn = function (ctxt) {
-          ctxt.drawImage($bitmap, r.leftX, r.topY, r.width, r.height)
-        }
-        r.facts = facts[0]
-        objects.push(r)
+  client => {
+    client.select(
+      'image from webcam is $bitmap'
+    ).do(({bitmap}) => {
+      illuminate(ctxt => {
+        ctxt.drawImage(bitmap, canvas.width - 320, 0, 320, 240)
       })
+    })
   },
   true)
-
-*/
 
 let targetObjId = null
 
