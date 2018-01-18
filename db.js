@@ -160,7 +160,8 @@ orchestrator.addProcess(
         })
       }
     )
-  })
+  },
+  true)
 
 orchestrator.addProcess(
   'seeing',
@@ -181,7 +182,8 @@ orchestrator.addProcess(
         }
       }
     )
-  })
+  },
+  true)
 
 orchestrator.addProcess(
   'is near a mouse',
@@ -199,7 +201,8 @@ orchestrator.addProcess(
         retract([$obj, 'is near a mouse'])
       }
     })
-  }
+  },
+  true
 )
 
 orchestrator.addProcess(
@@ -310,7 +313,8 @@ orchestrator.addProcess(
           ctxt.linewidth = 1
         })
       })
-  })
+  },
+  true)
 
 let targetObjId = null
 
