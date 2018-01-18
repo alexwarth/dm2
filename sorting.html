@@ -25,8 +25,8 @@ class Status extends Rectangle {
   }
 
   async step(t) {
-    const responses = await this.to.nearby().send('ping');
-    if (responses.every(({receiver, result}) => receiver.color === 'cornflowerblue')) {
+    const responses = await this.to.all(SentientRectangle).send('ping');
+    if (responses.every(({receiver, result}) => receiver.state === 'happy')) {
       this.msg = 'Yay, you did it!';
       this.color = 'white';
     } else {
@@ -43,20 +43,25 @@ class SentientRectangle extends Rectangle {
   }
 
   async step(t) {
-    const responses = await this.to.right().send('ping');
-    if (responses.every(({receiver, result}) => this.height < receiver.height)) {
-      this.color = 'cornflowerblue';
-      this.faceColor = 'black';
+    const responses = await this.to.all(SentientRectangle).left().send('ping');
+    if (responses.every(({receiver, result}) => receiver.height <= this.height)) {
       this.state = 'happy';
     } else {
-      this.color = 'maroon';
-      this.faceColor = 'white';
       this.state = 'sad';
     }
   }
 
   drawOn(ctxt, options) {
+    if (this.state === 'happy') {
+      this.color = 'cornflowerblue';
+      this.faceColor = 'black';
+    } else {
+      this.color = 'maroon';
+      this.faceColor = 'white';
+    }
+
     super.drawOn(ctxt, options);
+
     ctxt.fillStyle = ctxt.strokeStyle = this.faceColor;
 
     ctxt.beginPath();
