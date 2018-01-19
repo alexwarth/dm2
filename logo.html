@@ -209,13 +209,15 @@ class Turtle extends Rectangle {
     // Turtle
     ctxt.beginPath();
     ctxt.fillStyle = 'white';
-    ctxt.moveTo(this.x, this.y);
+    ctxt.moveTo(
+      this.x + 10 * Math.cos(this.heading / 180 * Math.PI),
+      this.y + 10 * Math.sin(this.heading / 180 * Math.PI));
     ctxt.lineTo(
-      this.x + 30 * Math.cos((this.heading - 140) / 180 * Math.PI),
-      this.y + 30 * Math.sin((this.heading - 140) / 180 * Math.PI));
+      this.x + 10 * Math.cos((this.heading - 140) / 180 * Math.PI),
+      this.y + 10 * Math.sin((this.heading - 140) / 180 * Math.PI));
     ctxt.lineTo(
-      this.x + 30 * Math.cos((this.heading + 140) / 180 * Math.PI),
-      this.y + 30 * Math.sin((this.heading + 140) / 180 * Math.PI));
+      this.x + 10 * Math.cos((this.heading + 140) / 180 * Math.PI),
+      this.y + 10 * Math.sin((this.heading + 140) / 180 * Math.PI));
     ctxt.fill();
   }
 
