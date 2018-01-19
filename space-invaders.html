@@ -27,7 +27,7 @@ class Alien extends Rectangle {
       await this.turnAround();
       await this.to.all(Alien).nearby().send('turnAround');
     }
-    const responses = await this.to.all(Bullet).down(this.height / 2 + 2).send('ping');
+    const responses = await this.to.all(Bullet).down(this.height / 2 + 10).send('ping');
     const bullets = responses.map(response => response.receiver);
     for (let bullet of bullets) {
       bullet.destroy();
