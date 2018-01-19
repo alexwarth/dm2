@@ -9,6 +9,17 @@ class Obj {
     this.color = color;
   }
 
+  moveTo(x, y) {
+    const dx = x - this.x;
+    const dy = y - this.y;
+    this.moveBy(dx, dy);
+  }
+
+  moveBy(dx, dy) {
+    this.x += dx;
+    this.y += dy;
+  }
+
   destroy() {
     const idx = objects.indexOf(this);
     if (idx < 0) {
@@ -490,8 +501,9 @@ canvas.addEventListener('mousemove', e => {
   mouse.x = e.offsetX;
   mouse.y = e.offsetY;
   if (mouse.targetObj) {
-    mouse.targetObj.x = mouse.x - mouse.targetObjOffsetX;
-    mouse.targetObj.y = mouse.y - mouse.targetObjOffsetY;
+    mouse.targetObj.moveTo(
+      mouse.x - mouse.targetObjOffsetX,
+      mouse.y - mouse.targetObjOffsetY);
   }
 });
 
@@ -533,7 +545,7 @@ function fixCanvasSize() {
 
 fixCanvasSize();
 
-async function main(t) {
+async function main() {
   fixCanvasSize();
   for (let obj of objects) {
     await obj.step(t);

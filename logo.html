@@ -1,0 +1,295 @@
+<html>
+  <body style="margin: 0; background: black;">
+    <div style="text-align: center;">
+      <canvas id="canvas"></canvas>
+    </div>
+    <script src="dm.js"></script>
+    <script>
+
+'use strict';
+
+debug = false;
+
+class Val extends Circle {
+  constructor(x, y) {
+    super(x, y, 20, 'cornflowerblue');
+  }
+
+  drawOn(ctxt, options) {
+    super.drawOn(ctxt, options);
+    ctxt.font = '16px Monaco';
+    ctxt.fillStyle = 'yellow';
+    const text = '' + this.value;
+    const x = this.x - ctxt.measureText(text).width / 2;
+    const y = this.y + 5;
+    ctxt.fillText(text, x, y);
+  }
+
+  ready() {
+    return true;
+  }
+}
+
+class Num extends Val {
+  constructor(x, y, value) {
+    super(x, y);
+    this.value = value;
+  }
+}
+
+class RedVar extends Num {
+  constructor(x, y) {
+    super(x, y, 0);
+    this.color = 'maroon';
+  }
+
+  async increaseBy(n) {
+    this.value += n;
+  }
+}
+
+class Cmd extends Rectangle {
+  constructor(x, y, label) {
+    super(x, y, 50, 50, 'indigo');
+    this.label = label;
+    this.next = null;
+  }
+
+  moveBy(dx, dy) {
+    super.moveBy(dx, dy);
+    if (this.next !== null) {
+      this.next.moveBy(dx, dy);
+    }
+  }
+
+  async step(t) {
+    const responses = await this.to.one(Cmd).down(100).send('ping');
+    this.next = responses.length === 1 ? responses[0].receiver : null;
+  }
+
+  ready() {
+    return true;
+  }
+
+  async exec() {
+    if (this.ready()) {
+      await this.execInner();
+      await this.to.one(Cmd).down(100).send('exec');
+    }
+  }
+
+  async execInner() {
+    throw new Error('subclass responsibility');
+  }
+
+  drawUnderOn(ctxt) {
+    if (this.next) {
+      ctxt.strokeStyle = 'yellow';
+      ctxt.moveTo(this.x, this.y);
+      ctxt.lineTo(this.next.x, this.next.y);
+      ctxt.stroke();
+    }
+  }
+
+  drawOn(ctxt, options) {
+    ctxt.font = '16px Monaco';
+    const labelWidth = ctxt.measureText(this.label).width;
+    this.width = labelWidth + 20;
+    super.drawOn(ctxt, options);
+    ctxt.fillStyle = 'white';
+    ctxt.fillText(this.label, this.x - labelWidth / 2, this.y + 5);
+  }
+}
+
+class Cmd1 extends Cmd {
+  constructor(x, y, label) {
+    super(x, y, label);
+    this.arg = null;
+  }
+
+  moveBy(dx, dy) {
+    super.moveBy(dx, dy);
+    if (this.arg !== null) {
+      this.arg.moveBy(dx, dy);
+    }
+  }
+
+  async step(t) {
+    super.step(t);
+    const responses = await this.to.one(Val).right(this.width / 2 + 100).send('ping');
+    this.arg = responses.length === 1 ? responses[0].receiver : null;
+  }
+
+  ready() {
+    return this.arg !== null && this.arg.ready();
+  }
+
+  drawUnderOn(ctxt) {
+    super.drawUnderOn(ctxt);
+    if (this.arg !== null) {
+      ctxt.strokeStyle = 'white';
+      ctxt.moveTo(this.x, this.y);
+      ctxt.lineTo(this.arg.x, this.arg.y);
+      ctxt.stroke();
+    }
+  }
+
+  drawOn(ctxt, options) {
+    this.color = this.ready() ? 'indigo' : '#444';
+    super.drawOn(ctxt, options);
+  }
+}
+
+class FwdBy extends Cmd1 {
+  constructor(x, y) {
+    super(x, y, 'forward by');
+  }
+
+  async execInner() {
+    await this.to.all(Turtle).send('forwardBy', this.arg.value);
+  }
+}
+
+class TurnBy extends Cmd1 {
+  constructor(x, y) {
+    super(x, y, 'turn by');
+  }
+
+  async execInner() {
+    await this.to.all(Turtle).send('turnBy', this.arg.value);
+  }
+}
+
+class IncreaseRedBy extends Cmd1 {
+  constructor(x, y) {
+    super(x, y, 'increase red variable by');
+  }
+
+  async execInner() {
+    await this.to.all(RedVar).send('increaseBy', this.arg.value);
+  }
+}
+
+class Repeat extends Cmd {
+  constructor(x, y) {
+    super(x, y, 'repeat');
+  }
+
+  async step(t) {
+    super.step(t);
+    if (t % 10 === 0) {
+      await this.exec();
+    }
+  }
+
+  async execInner() {
+    // no-op
+  }
+}
+
+class Turtle extends Rectangle {
+  constructor(x, y) {
+    super(x, y, 0, 0, 'black');
+    this.path = [{x: x, y: y}];
+    this.heading = 270;
+  }
+
+  drawUnderOn(ctxt) {
+    // Trails
+    ctxt.beginPath();
+    ctxt.strokeStyle = 'yellow';
+    const p0 = this.path[0];
+    ctxt.moveTo(p0.x, p0.y);
+    for (let idx = 1; idx < this.path.length; idx++) {
+      const pi = this.path[idx];
+      ctxt.lineTo(pi.x, pi.y);
+    }
+    ctxt.stroke();
+
+    // Turtle
+    ctxt.beginPath();
+    ctxt.fillStyle = 'white';
+    ctxt.moveTo(this.x, this.y);
+    ctxt.lineTo(
+      this.x + 30 * Math.cos((this.heading - 140) / 180 * Math.PI),
+      this.y + 30 * Math.sin((this.heading - 140) / 180 * Math.PI));
+    ctxt.lineTo(
+      this.x + 30 * Math.cos((this.heading + 140) / 180 * Math.PI),
+      this.y + 30 * Math.sin((this.heading + 140) / 180 * Math.PI));
+    ctxt.fill();
+  }
+
+  drawOn(ctxt, options) {
+    // no-op
+  }
+
+  forwardBy(n) {
+    this.x += n * Math.cos(this.heading / 180 * Math.PI);
+    this.y += n * Math.sin(this.heading / 180 * Math.PI);
+    this.path.push({x: this.x, y: this.y});
+  }
+
+  turnBy(n) {
+    this.heading += n;
+  }
+}
+
+let turtle;
+
+objects = [
+  new Num(100, 100, 1),
+  new Num(100, 100, 1),
+  new Num(100, 100, 1),
+  new Num(100, 100, 1),
+
+  new Num(100, 200, 10),
+  new Num(100, 200, 10),
+  new Num(100, 200, 10),
+  new Num(100, 200, 10),
+
+  new Num(100, 300, 30),
+  new Num(100, 300, 30),
+  new Num(100, 300, 30),
+  new Num(100, 300, 30),
+
+  new Num(100, 400, 60),
+  new Num(100, 400, 60),
+  new Num(100, 400, 60),
+  new Num(100, 400, 60),
+
+  new Num(100, 500, 90),
+  new Num(100, 500, 90),
+  new Num(100, 500, 90),
+  new Num(100, 500, 90),
+
+  new RedVar(100, 600),
+  new RedVar(100, 600),
+  new RedVar(100, 600),
+  new RedVar(100, 600),
+
+  new FwdBy(300, 100),
+  new TurnBy(300, 350),
+  new Repeat(300, 600),
+  new IncreaseRedBy(300, 850),
+  new Turtle(canvas.width / 2, canvas.height / 2),
+  //new Turtle(canvas.width / 2 + 100, canvas.height / 2 + 100)
+];
+
+document.body.onkeydown = async e => {
+  if (e.key !== 'Shift') {
+    return;
+  }
+  for (let idx = objects.length - 1; idx >= 0; idx--) {
+    const obj = objects[idx];
+    if (obj.containsPoint(mouse.x, mouse.y) &&
+        obj instanceof Cmd &&
+        obj.ready()) {
+      await obj.exec();
+      return;
+    }
+  }
+};
+
+    </script>
+  </body>
+</html>
