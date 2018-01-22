@@ -1,6 +1,6 @@
 'use strict'
 
-const db = new RoomDB()
+const db = new RoomDB(`http://localhost:3000`)
 const client = db.connect()
 client.assert('#C1 is a circle at (300, 300)')
 client.assert('#C1\'s color is "cornflowerblue"')
@@ -60,7 +60,7 @@ class Orchestrator extends Rectangle {
 const orchestrator = new Orchestrator()
 objects.push(orchestrator)
 
-function illuminate(fn) {
+function illuminate (fn) {
   const r = new Rectangle(0, 0, 0, 0, 'black')
   r.drawOn = () => {}
   r.drawOverOn = fn
@@ -92,9 +92,9 @@ orchestrator.addProcess(
       '$obj\'s height is $h',
       '$obj\'s color is $color'
     ).do(({obj, x, y, w, h, color}) => {
-      const r = new Rectangle(x, y, w, h, color);
+      const r = new Rectangle(x, y, w, h, color)
       r.id = obj
-      objects.push(r);
+      objects.push(r)
     })
   })
 
@@ -106,7 +106,7 @@ orchestrator.addProcess(
       '$id is a $t at ($x, $y)'
     ).do(({id, x, y}) => {
       illuminate(ctxt => {
-        const label = id.toString();
+        const label = id.toString()
         ctxt.fillStyle = 'lightyellow'
         ctxt.fillText(label, x - ctxt.measureText(label).width / 2, y + 6)
       })
@@ -148,7 +148,7 @@ orchestrator.addProcess(
   },
   true)
 
-function dist(ax, ay, bx, by) {
+function dist (ax, ay, bx, by) {
   return Math.pow(Math.pow(ax - bx, 2) + Math.pow(ay - by, 2), 0.5)
 }
 
@@ -156,7 +156,7 @@ orchestrator.addProcess(
   'seeing',
   'lightgreen',
   client => {
-    client.retractEverythingAssertedByMe();
+    client.retractEverythingAssertedByMe()
     client.select(
       '$obj1 is a $t1 at ($x1, $y1)',
       '$obj2 is a $t2 at ($x2, $y2)'
@@ -196,7 +196,7 @@ orchestrator.addProcess(
   'is near a mouse',
   'orange',
   client => {
-    client.retractEverythingAssertedByMe();
+    client.retractEverythingAssertedByMe()
     client.select(
       '$obj is a $t at ($ox, $oy)',
       'mouse is at ($mx, $my)'
@@ -367,18 +367,17 @@ document.body.addEventListener('mouseup', e => {
   console.log(db.toString())
 })
 
+// const host = window.document.location.host.replace(/:.*/, '')
+// let ws = new WebSocket('ws://' + host + ':3000')
 
-//const host = window.document.location.host.replace(/:.*/, '')
-//let ws = new WebSocket('ws://' + host + ':3000')
-
-//ws.onconnect = (event, somethingelse) => {
+// ws.onconnect = (event, somethingelse) => {
 //  ws.send('it me')
-//}
+// }
 
-//ws.onmessage = event => {
+// ws.onmessage = event => {
 //  console.log(event)
 //  const assertion = JSON.parse(event.data)
 //  if (typeof assertion == 'Array') {
  //   db.assert(assertion)
   // }
-//}
+// }

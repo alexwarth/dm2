@@ -7,8 +7,17 @@
   "license": "MIT",
   "dependencies": {
     "koa": "^2.4.1",
+    "koa-body": "^2.5.0",
+    "koa-cors": "^0.0.16",
     "koa-route": "^3.2.0",
     "koa-static": "^4.0.2",
-    "koa-websocket": "^4.1.0"
+    "koa-websocket": "^4.1.0",
+    "watch": "^1.0.2"
+  },
+  "scripts": {
+    "watch": "watch 'yarn run build' ~/src/roomdb/src/ lib/shims/",
+    "build": "yarn run build:web && yarn run build:node",
+    "build:node": "cd ~/src && cat roomdb/src/RoomDB.js ohm/dist/ohm.js dm2/lib/shims/ohm-node.js roomdb/src/parser.js dm2/lib/shims/roomdb-node.js > dm2/lib/roomdb.node.js",
+    "build:web": "cd ~/src && cat roomdb/src/RoomDB.js ohm/dist/ohm.js roomdb/src/parser.js > dm2/lib/roomdb.js"
   }
 }
